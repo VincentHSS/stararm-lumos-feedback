@@ -626,3 +626,20 @@ repository nor the SDK was modified. Source tests do not validate physical
 transparency, load stability, communication reliability or damping feel. Complete
 offline validation → basic following → monitoring → physical damping/HOLD checks
 on the actual configured hardware before calling the adaptation commissioned.
+
+## Optional TypeLJ following gains
+
+The local session's robot configuration may set both `gripper_follow_kp` and
+`gripper_follow_kd`. Both default to `null`, preserving the original
+`setGripperPosition` interface. Explicit values must be finite within the
+reviewed SDK ranges: kp 0.1–20 and kd 0.1–1. The bound SDK YAML must explicitly
+select TypeLJ and contain valid `default_kp`/`default_kd`.
+
+This opt-in path sends normalized physical opening × 0.08 metres through
+`setGripperDistance`; it preserves normalized targets and baseline comparisons.
+Startup still uses the unchanged YAML defaults. Each endpoint's 10% opening
+band smoothly blends following gains back to those defaults; exact open/closed
+commands use the default gains. It changes neither motion limits nor physical
+motor-range guards, and does not certify unloaded/load separation. Review values
+for the actual assembly, regenerate the normal binding after session changes,
+and verify physically before adopting them. These gains are not web-editable.

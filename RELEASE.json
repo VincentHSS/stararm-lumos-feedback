@@ -1,5 +1,5 @@
 {
-  "version": "0.6.26",
+  "version": "0.6.27",
   "format": "source",
   "hardware_validated": false,
   "files": [
@@ -9,7 +9,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "349d86e70ea293fa3545fc55551ef9b015347d32761627db7ee742a896d25712"
+      "sha256": "8b3c54d0807e56b82958e1b5beb53086772a6de1bdf62061c3ae85c1d0d0e56b"
     },
     {
       "path": "README_STANDALONE.md",
@@ -17,7 +17,7 @@
     },
     {
       "path": "VALIDATION.md",
-      "sha256": "7699df4b41bb41603e2ae9de49f0c6106db5900ed8c1b155b3edc11a54e76f98"
+      "sha256": "7497488c060dd3e6e01e209d41bfe570961f27df4b1c6afd012c3261992570a5"
     },
     {
       "path": "configs/example.json",
@@ -33,11 +33,11 @@
     },
     {
       "path": "docs/feedback.md",
-      "sha256": "dbd10ec621c3d5103cf60cc0675ee8647dd38fed7322dcf662df107ab691d4a0"
+      "sha256": "71552593a5af3fbdc4bfabf5f5de16192a192ea93ff39de21a629a77171ff270"
     },
     {
       "path": "docs/feedback.zh.md",
-      "sha256": "0aac618055c83b876a786ba2b49488ae00b48dc19dc1a497db7c59c112db663d"
+      "sha256": "dcfed0f95e6cb96df05b6c8427fd5845ee50f4139d1c2ea59eff0437516ef8de"
     },
     {
       "path": "docs/hardware.md",
@@ -57,7 +57,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "cf9b13b9aae57087bf03f8a34c6625f5425e01600a8a80ccd1b862c616cbfd1d"
+      "sha256": "a5808892ca4d4b9dafe4d697d8483ddea02371738d88b22995b2907380225bb3"
     },
     {
       "path": "scripts/install_lerobot_ubuntu.sh",
@@ -93,11 +93,15 @@
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/config.py",
-      "sha256": "3f27515c0c7e9b2f4ab5bcc2cfb27ae738f4dc77fadd01b2e353d93d5b623442"
+      "sha256": "581628475c25d9d49af809bcc1625b6af6cc3fa7e0b3012cb18cb54f180eeb26"
+    },
+    {
+      "path": "src/lerobot_robot_lumos_stararm102/gripper_control.py",
+      "sha256": "b906e5456adf433e564aa97e46fb66d763430b520fe50b34b262557ea767dcb3"
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/lumos.py",
-      "sha256": "57d0eb164637bc680bb159c6d1595cbc6b77e8b5adc9d12c901fea4c8a12ee86"
+      "sha256": "842617eb3a848b2768dd35c258e7418da32361d2f4472468d5d8233a81d7184d"
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/stararm102.py",
@@ -105,7 +109,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/__init__.py",
-      "sha256": "8280c46f5251e5eee060c59cdbba31290b80611c4f388d56cc0ec9b00d92db77"
+      "sha256": "2b5bb6414b9d6f4cedbc66f6c6daa32fbafe8f53428e4349ea950a9d9fe4bc5e"
     },
     {
       "path": "src/stararm_lumos_feedback/baseline.py",
@@ -446,6 +450,10 @@
     {
       "path": "tests/test_follow_control.py",
       "sha256": "31303082b9fa9d31523ae57b3788ed05c731b52d037e45779989a1a7fec9eecb"
+    },
+    {
+      "path": "tests/test_gripper_follow_control.py",
+      "sha256": "9cd39edb4f70e9a7903b6e28cca4203b13a26a4db9227cac856852e6dc25d10f"
     },
     {
       "path": "tests/test_leader_filter_config.py",

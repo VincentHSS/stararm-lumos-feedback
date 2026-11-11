@@ -23,6 +23,10 @@ class LumosConfig(RobotConfig):
     startup_wait_s: float = 2.0
     max_speed_deg_per_sec: float = 50.0
     max_target_step_deg: float = 2.0
+    # Optional TypeLJ following gains. SDK startup and endpoint gains stay at
+    # the bound YAML defaults; None preserves setGripperPosition behavior.
+    gripper_follow_kp: float | None = None
+    gripper_follow_kd: float | None = None
     # Optional in preview; mandatory for execution. Bounds use SDK joint radians.
     joint_limits_file: str = ""
     cameras: dict[str, CameraConfig] = field(default_factory=dict)

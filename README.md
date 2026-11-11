@@ -4,11 +4,11 @@ StarArm 102 主臂与 Lumos 从臂的遥操作、剩余力矩阻尼和本地三�
 
 Teleoperation, torque-residual damping and a local 3D dashboard for StarArm 102 and Lumos
 
-**Version 0.6.26** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+**Version 0.6.27** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
 
-0.6.26 增加七轴基线到位诊断，显示阻碍轴的目标、发送值、实测值与允许误差，帮助定位“等待从臂到位”。门控、保护阈值和阻尼策略不变。
+0.6.27 增加可选 TypeLJ 跟随增益：保留 SDK 初始化默认值，在跟随时通过距离接口发送增益，并在两端各 10% 开度内平滑回到 SDK 默认增益。沿用七轴基线到位诊断；保护阈值和阻尼策略不变。
 
-Version 0.6.26 exposes seven-axis baseline admission diagnostics: target, sent and measured positions, errors and tolerances for each blocking axis. Admission rules, protection thresholds and damping policy are unchanged.
+Version 0.6.27 adds optional TypeLJ following gains through the SDK distance interface. Native startup defaults are preserved, and gains smoothly return to SDK defaults within each endpoint’s 10% opening band. Seven-axis baseline diagnostics remain available; protection thresholds and damping policy are unchanged.
 
 ## 中文
 
@@ -116,6 +116,6 @@ Documentation: [Feedback configuration](docs/feedback.md) · [Hardware startup](
 | `tests/` | Device-free regression tests / 无设备回归测试 |
 | `tools/` | Model checks, SDK compatibility and source export / 模型检查、SDK 兼容与源码导出 |
 
-581 software tests passed for 0.6.26. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
+593 software tests passed for 0.6.27. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
 
-0.6.26 已通过 581 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
+0.6.27 已通过 593 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
