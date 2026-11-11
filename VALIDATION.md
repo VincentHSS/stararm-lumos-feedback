@@ -1,6 +1,8 @@
-# Software validation · 0.6.28
+# Software validation · 0.6.29
 
 ## 中文
+
+0.6.29 发布前，626 项软件测试全部通过，无跳过。新增 20 项回归覆盖初始化前补齐在途组、阻塞预检和 SDK 初始化期间持续接收、同批完整组后新半组、真实缺帧与原异常传播、取消、单读者串口锁、接收预算和线程停止交接。保留原 250 ms 半组期限、完整六轴确认和阻尼／运动保护。软件复现可重现并修复初始化暂停接收导致的同类错误，尚未确认本次真机故障的实际帧到达时间，也未验证新版真机手感。
 
 0.6.28 发布前，606 项软件测试全部通过，无跳过。Ruff、JavaScript 模块语法、Shell 语法及差异空白检查通过。新增 13 项回归覆盖六轴／夹爪分组准入与静止窗口、夹爪静差不再阻断已就绪六轴、J4 独立负载响应、公共条件不可被分组覆盖、首组完成后关闭采集且运行中不补学、故障全轴归零，以及中英文分组显示与稳定 DOM。到位阈值、物理范围、整臂动力学、原生按钮及 SDK 初始化保持原实现。
 
@@ -22,6 +24,8 @@ git diff --check -- . ':!tests/fixtures/sdk_0404125_pybind_constructor.cpp'
 软件测试通过不代表真机跟随、全姿态空载分离、带载响应、原生按钮仲裁或阻尼手感已验收。显示插值不会修复 CAN 缺帧。单姿态空载基线不能证明所有运动状态下均无误阻尼；剩余力矩不是准确末端力。`experiment` 仍为实验功能，`run` 需要另行审核的本机配置与授权。
 
 ## English
+
+All 626 software tests passed without skips before the 0.6.29 release. Twenty added regressions cover pending-group completion, RX continuity through blocking preflight and SDK initialization, a new partial group following a complete group in one read, real missing frames and original exception propagation, cancellation, single-reader UART locking, receive budgets and stopped/joined handoff. The 250 ms group deadline, six-axis confirmation and existing motion/damping guards remain. The software reproduction fixes a matching error caused by interrupted startup reception; arrival times in the failed physical session and the new hardware behavior remain unverified.
 
 All 606 software tests passed without skips before the 0.6.28 release. Ruff, JavaScript module syntax, shell syntax and diff whitespace checks also passed. Thirteen added regressions cover grouped arm/gripper admission and stationary windows, gripper arrival error without blocking a qualified arm, independent J4 load response, mandatory common admission, collection closing before output without later learning, common-fault zero output, and bilingual group status with stable DOM. Arrival tolerances, physical ranges, whole-arm dynamics, native-button handling and SDK initialization are unchanged.
 

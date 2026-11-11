@@ -1,4 +1,4 @@
-# 0.6.28 hardware startup
+# 0.6.29 hardware startup
 
 Version 0.6.24 applies each bound axis `limit_margin` consistently to measured positions before and after startup, matching CAN checks so half an encoder step near zero is not rejected by a later strict measurement check. Raw measurements and baseline anchors are preserved. Initial position commands and relative-start references stay clipped to the original limits; Leader target limits are unchanged. Measurements beyond the existing margin still fail. Recalibration is not required; changed source requires normal rebinding.
 
@@ -219,6 +219,8 @@ targets. Failure to complete a valid same-mode six-axis group within 0.25 second
 ends the session. Legacy monitor freshness and all joint missing-frame guards
 remain enabled. No-board mode does not detect the board, and the selector cannot
 disable a physically connected board's native control of Leader resistance.
+
+Version 0.6.29 keeps RX-only native command reception running during preflight and blocking SDK initialization, under the same UART lock. Pending groups must finish within their original deadline before initialization. The temporary receiver is stopped and joined before UART ownership returns to the control loop. Detection keeps waiting if a new partial group follows a complete group in the same read. This sends no button commands, clears no receive buffer and does not extend the 250 ms deadline.
 
 The selector does not authorize software force feedback. In follow/monitor modes,
 this software sends no Leader damping/hold commands, but a native HD board still

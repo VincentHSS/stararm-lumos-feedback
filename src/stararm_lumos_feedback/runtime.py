@@ -150,13 +150,14 @@ class LeaderReader:
 
     def _command_button_state(self):
         if self.command_button is not None:
-            self.command_button.update()
-            self.manual_hold = (
-                self.command_button.pending or self.command_button.locked is not False
-                or getattr(self.transport, "native_output_unknown", False)
-            )
-            if self.button_status is not None:
-                self.button_status(self.command_button.verified if not self.command_button.pending else None)
+            with self.transport.lock:
+                self.command_button.update()
+                self.manual_hold = (
+                    self.command_button.pending or self.command_button.locked is not False
+                    or getattr(self.transport, "native_output_unknown", False)
+                )
+                if self.button_status is not None:
+                    self.button_status(self.command_button.verified if not self.command_button.pending else None)
 
     def install(self):
         self.leader.native_button_rx_active = False
@@ -226,6 +227,7 @@ class Session:
         self.stop = threading.Event()
         self.watchdog = None
         self.error = None
+        self._startup_rx_error = None
         self.heartbeat = time.monotonic()
         self.target = None
         self.desired = None
@@ -501,12 +503,60 @@ class Session:
         return samples
 
     def check_cancelled(self):
+        if self._startup_rx_error is not None:
+            raise self._startup_rx_error
         # A concurrent watchdog fault must remain an error even when the user
         # also requests stop. Cancellation only suppresses an explicit stop.
         if self.error is not None:
             raise RuntimeError(f"Feedback stopped: {self.error}") from self.error
         if self.stop.is_set():
             raise SessionCancelled
+
+    @contextmanager
+    def native_startup_reception(self):
+        """Keep the single UART receiver alive while SDK startup blocks.
+
+        No monitor query or control is sent here. The existing transport lock
+        serializes this receiver with preflight queries, and the thread is
+        joined before the active loop takes over. The native group deadline
+        and six-joint confirmation rules remain unchanged.
+        """
+        transport = self.transport
+        if transport is None or transport.command_button is None:
+            yield
+            return
+        transport.settle_native_commands(cancel_check=self.check_cancelled)
+        finished = threading.Event()
+
+        def receive():
+            try:
+                while not finished.is_set() and not self.stop.is_set():
+                    transport.receive_native_commands()
+                    finished.wait(0.002)
+            except Exception as exc:
+                self._startup_rx_error = exc
+                self.stop.set()
+
+        receiver = threading.Thread(target=receive, name="lumos-startup-uart-rx", daemon=True)
+        receiver.start()
+        failed = False
+        try:
+            self.check_cancelled()
+            yield
+        except BaseException:
+            failed = True
+            if self._startup_rx_error is not None:
+                raise self._startup_rx_error
+            raise
+        finally:
+            finished.set()
+            # UART reads are nonblocking and transport polling is bounded.
+            # Complete the handoff before any active query or UART cleanup;
+            # a timed join must never leave a second reader behind.
+            receiver.join()
+            if not failed:
+                self.check_cancelled()
+                transport.settle_native_commands(cancel_check=self.check_cancelled)
 
     def check_sdk(self, samples):
         self.check_cancelled()
@@ -858,22 +908,25 @@ class Session:
                     raise RuntimeError("Current-pose startup requires engineering follow or monitor mode")
                 self.robot.after_sdk_startup = self.current_startup_feedback
                 self._startup_callback_installed = True
-            if self.before_enable is not None:
-                self.before_enable(self.transport)
-                self.check_cancelled()
-            if getattr(self.robot, "startup_strategy", "home") == "current_relative":
-                try:
-                    reference = self.robot.startup_reference
-                    offset = tuple(reference["session_offset_sdk_rad"])
-                    if (
-                        reference["startup_strategy"] != "current_relative" or len(offset) != 6
-                        or not all(type(v) in (int, float) and math.isfinite(v) for v in offset)
-                    ):
-                        raise ValueError("invalid session offset")
-                except (AttributeError, KeyError, TypeError, ValueError) as exc:
-                    raise RuntimeError("Current-relative startup requires its fixed preflight offset") from exc
-                self._session_offset_sdk_rad = offset
-            self.robot.connect()  # SDK construction can enable motors; monitor already listening
+            with self.native_startup_reception():
+                if self.before_enable is not None:
+                    self.before_enable(self.transport)
+                    self.check_cancelled()
+                if getattr(self.robot, "startup_strategy", "home") == "current_relative":
+                    try:
+                        reference = self.robot.startup_reference
+                        offset = tuple(reference["session_offset_sdk_rad"])
+                        if (
+                            reference["startup_strategy"] != "current_relative" or len(offset) != 6
+                            or not all(type(v) in (int, float) and math.isfinite(v) for v in offset)
+                        ):
+                            raise ValueError("invalid session offset")
+                    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+                        raise RuntimeError("Current-relative startup requires its fixed preflight offset") from exc
+                    self._session_offset_sdk_rad = offset
+                if command_button is not None:
+                    self.transport.settle_native_commands(cancel_check=self.check_cancelled)
+                self.robot.connect()  # SDK construction can enable motors; monitor already listening
             self.check_cancelled()
             deadline = time.monotonic() + guards["startup_feedback_s"]
             while True:

@@ -3,6 +3,7 @@
 import json
 import math
 import struct
+import threading
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -527,7 +528,7 @@ class ExperimentSessionTests(FixtureCase):
         session = Session(profile, FakeRobot(), leader, Caps(), mode="experiment", monitor=LiveMonitor(profile))
         button = CommandButtonState()
         button.feed(b"".join(packet(24, struct.pack("<BBH", i, 0x10, 0)) for i in range(6)))
-        session.transport = SimpleNamespace(command_button=button, native_output_unknown=True,
+        session.transport = SimpleNamespace(command_button=button, native_output_unknown=True, lock=threading.RLock(),
                                             observe_native_state=lambda: False)
         session.reader = LeaderReader(leader, session.transport)
         session._sdk_history_ready = True

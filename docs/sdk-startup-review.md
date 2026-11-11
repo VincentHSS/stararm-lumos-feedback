@@ -50,6 +50,12 @@ Gitee 与 GitHub main 均为 `040412542c0b6b6fd2bb6dd652c0de6c666631be`（SDK 0.
 
 ## Pinned material / 固定资料
 
+### Startup UART reception / 启动串口接收
+
+A software reproduction found that a preflight query can finish its monitor replies after receiving native commands for IDs 0–4, then enter a blocking SDK constructor before consuming ID 5. The unchanged 250 ms parser deadline then expires before queued bytes are read. This reproduces the reported error; it does not establish the arrival timing of the failed physical session. Version 0.6.29 settles pending groups before initialization and keeps RX-only reception alive through preflight and SDK construction, using the same transport lock. The receiver stops and joins before handoff. True incomplete groups still fail; SDK binaries, confirmation rules and damping policy are unchanged.
+
+软件复现发现，预检可能收齐监测回包及按钮 ID 0–4 命令后就进入阻塞的 SDK 构造，尚未读取 ID 5。原 250 ms 期限随后在读取排队字节前到期，可复现用户看到的错误，但不能据此确定失败真机会话的实际到达时间。0.6.29 在初始化前收齐在途组，预检和 SDK 构造期间使用同一传输锁持续只读接收，交接前停止并等待线程退出。真实半组仍会报错；SDK 二进制、六轴确认规则及阻尼策略不变。
+
 ### Constructor GIL correction / 构造执行锁修正
 
 The pinned pybind constructor parses Python kwargs and then calls the native

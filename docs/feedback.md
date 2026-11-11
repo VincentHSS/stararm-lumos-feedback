@@ -1,4 +1,4 @@
-# StarArm → Lumos force feedback · 0.6.28
+# StarArm → Lumos force feedback · 0.6.29
 
 Version 0.6.26 adds seven-axis baseline admission diagnostics, including normalized gripper opening. The dashboard shows each blocking axis's target, sent and measured values with errors and tolerances while waiting for the first baseline. Stopped, stale or frozen-baseline sessions do not show this as a live blocker. This is diagnostic only; thresholds, admission ordering and damping policy are unchanged.
 
@@ -399,6 +399,8 @@ freezes new targets; failure to complete a valid group within 0.25 seconds is
 fatal. No-board mode skips board detection, retaining joint missing-frame checks.
 It cannot prevent a physically connected native board from controlling Leader
 resistance. None of these changes modifies the dynamics observer.
+
+Version 0.6.29 keeps RX-only native command reception running during preflight and blocking SDK initialization, under the same UART lock. Pending groups must finish within their original deadline before initialization. The temporary receiver is stopped and joined before UART ownership returns to the control loop. Detection keeps waiting if a new partial group follows a complete group in the same read. This sends no button commands, clears no receive buffer and does not extend the 250 ms deadline.
 
 The `monitor` baseline collector accepts only genuinely new seven-axis frames in
 continuous stationary windows. It reports absolute residual maximum, p95/p99,

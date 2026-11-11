@@ -4,7 +4,11 @@ StarArm 102 主臂与 Lumos 从臂的遥操作、剩余力矩阻尼和本地三�
 
 Teleoperation, torque-residual damping and a local 3D dashboard for StarArm 102 and Lumos
 
-**Version 0.6.28** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+**Version 0.6.29** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+
+0.6.29 修复启动期间原生按钮接收中断：初始化前在原期限内收齐在途命令，预检与 SDK 初始化期间使用同一串口锁持续只读接收，退出后停止并等待接收线程再交回控制循环。完整六轴确认、250 ms 半组期限、限位及功率上限不变。
+
+Version 0.6.29 keeps native button reception running during blocking preflight and SDK initialization, using the same UART lock. In-flight groups finish within their existing deadline before initialization, and the temporary receiver is stopped and joined before control takes over. Six-axis confirmation, the 250 ms group deadline, joint limits and power caps remain unchanged.
 
 0.6.28 修复夹爪未到位时连带阻断六轴阻尼的问题。六轴和夹爪分别检查启动基线资格，仍要求七轴实测静止；首组完成后关闭采集，未就绪组本次保持零阻尼。六轴继续使用整臂动力学，保留各组到位检查，页面分别显示基线状态。
 
@@ -120,6 +124,6 @@ Documentation: [Feedback configuration](docs/feedback.md) · [Hardware startup](
 | `tests/` | Device-free regression tests / 无设备回归测试 |
 | `tools/` | Model checks, SDK compatibility and source export / 模型检查、SDK 兼容与源码导出 |
 
-606 software tests passed for 0.6.28. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
+626 software tests passed for 0.6.29. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
 
-0.6.28 已通过 606 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
+0.6.29 已通过 626 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
