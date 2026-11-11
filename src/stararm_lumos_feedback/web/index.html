@@ -64,6 +64,12 @@
       <p id="feedbackBlocked" class="connection-blocked" role="status" hidden></p>
       <div id="experimentalPanel" class="experimental-panel" hidden>
         <p id="experimentalStatus" role="status"></p><p id="experimentalBaselines"></p><p id="experimentalCaps"></p><p id="experimentalRise"></p><p id="experimentalReason"></p>
+        <div id="localReferencePanel" class="baseline-admission" hidden>
+          <p id="localReferenceStatus" class="baseline-admission-title" role="status"></p>
+          <p id="localReferenceReason"></p>
+          <div id="localReferenceTable" class="scroll" hidden><table><thead><tr id="localReferenceColumns"></tr></thead><tbody id="localReferenceRows"></tbody></table></div>
+          <p class="baseline-admission-note" data-i18n="localReferenceNote"></p>
+        </div>
         <div id="baselineAdmissionPanel" class="baseline-admission" hidden>
           <p class="baseline-admission-title" data-i18n="baselineAdmissionTitle"></p>
           <div class="scroll"><table><thead><tr id="baselineAdmissionColumns"></tr></thead><tbody id="baselineAdmissionRows"></tbody></table></div>

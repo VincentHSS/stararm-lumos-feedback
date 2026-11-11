@@ -1,4 +1,4 @@
-"""Bounded in-memory observations of stationary absolute residuals.
+"""Bounded in-memory stationary residual observations and local envelopes.
 
 Stationarity is not evidence of an unloaded arm or of complete model mass.
 Nothing here subtracts a fitted mean, changes controller tuning, writes a file,
@@ -55,6 +55,7 @@ class BaselineEstimator:
             )
         self._rows = deque(maxlen=max_samples)
         self._pending = deque(maxlen=max_samples)
+        self._window_rows = deque(maxlen=max_samples)
         self._seen = None
         self._previous = None
         self._anchor = None
@@ -67,6 +68,7 @@ class BaselineEstimator:
         """Break continuity while retaining already qualified observations."""
         self._previous = self._anchor = None
         self._pending.clear()
+        self._window_rows.clear()
         self._continuous_s = 0.0
         self._qualified = False
 
@@ -80,7 +82,7 @@ class BaselineEstimator:
         if not all(
             type(s.sequence) is int
             and s.sequence > 0
-            and all(math.isfinite(x) for x in (s.q, s.velocity, s.stamp))
+            and all(math.isfinite(x) for x in (s.q, s.velocity, s.torque, s.stamp))
             for s in samples
         ):
             raise ValueError("Baseline requires finite positions, velocities and real sequence/timestamps")
@@ -117,13 +119,20 @@ class BaselineEstimator:
         if self._anchor is None:
             self._anchor = pose
         self._previous = samples
-        row = (pose, [abs(x) for x in residual_nm], credit)
+        # Keep absolute observations unchanged. Signed residual/model ranges
+        # are separate reference data, never a fitted correction to the model.
+        model_nm = [s.torque - residual for s, residual in zip(samples, residual_nm)]
+        if not all(math.isfinite(value) for value in model_nm):
+            raise ValueError("Baseline requires finite model torque observations")
+        row = (pose, [abs(x) for x in residual_nm], credit, list(residual_nm), model_nm)
         if self._qualified:
             self._rows.append(row)
+            self._window_rows.append(row)
         else:
             self._pending.append(row)
             if self._continuous_s + 1e-9 >= self.minimum_stationary_s:
                 self._rows.extend(self._pending)
+                self._window_rows.extend(self._pending)
                 self._pending.clear()
                 self._qualified = True
         return True
@@ -141,9 +150,37 @@ class BaselineEstimator:
             lower = [min(row[0][i] for row in self._rows) for i in range(7)]
             upper = [max(row[0][i] for row in self._rows) for i in range(7)]
             bins = len({tuple(math.floor(q / POSE_BIN_RAD) for q in row[0][:6]) for row in self._rows})
+            signed_min = [min(row[3][i] for row in self._rows) for i in range(7)]
+            signed_max = [max(row[3][i] for row in self._rows) for i in range(7)]
+            model_min = [min(row[4][i] for row in self._rows) for i in range(7)]
+            model_max = [max(row[4][i] for row in self._rows) for i in range(7)]
         else:
             maxima = p95 = p99 = recommended = lower = upper = None
+            signed_min = signed_max = model_min = model_max = None
             bins = 0
+        window_s = sum(row[2] for row in self._window_rows)
+        window_ready = (
+            self._qualified and len(self._window_rows) > 1
+            and window_s + 1e-9 >= self.minimum_stationary_s
+        )
+        window = dict(
+            ready=window_ready,
+            sample_count=len(self._window_rows),
+            retained_stationary_s=window_s,
+            coordinate_min=None,
+            coordinate_max=None,
+            signed_residual_min_nm=None,
+            signed_residual_max_nm=None,
+            model_min_nm=None,
+            model_max_nm=None,
+        )
+        if window_ready:
+            for key, column in (
+                ("coordinate", 0), ("signed_residual", 3), ("model", 4),
+            ):
+                unit = "" if key == "coordinate" else "_nm"
+                window[f"{key}_min{unit}"] = [min(row[column][i] for row in self._window_rows) for i in range(7)]
+                window[f"{key}_max{unit}"] = [max(row[column][i] for row in self._window_rows) for i in range(7)]
         return dict(
             label="stationary_not_unloaded_verified",
             ready=ready,
@@ -161,6 +198,11 @@ class BaselineEstimator:
             absolute_residual_max_nm=maxima,
             absolute_residual_p95_nm=p95,
             absolute_residual_p99_nm=p99,
+            signed_residual_min_nm=signed_min,
+            signed_residual_max_nm=signed_max,
+            model_min_nm=model_min,
+            model_max_nm=model_max,
+            current_window_reference=window,
             recommended_deadzone_nm=recommended,
             recommendation_method="absolute residual p99 + 4 decoded torque LSBs; mean is never removed",
             pose_coverage=dict(

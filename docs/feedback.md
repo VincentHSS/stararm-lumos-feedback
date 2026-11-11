@@ -40,13 +40,49 @@ safety rating.
 
 Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
-A sustained static load on J4 alone produces its corresponding damping once that
-axis's filtered residual exceeds the current deadzone and satisfies load
-confirmation; other joints do not need to move. The pure ramp duration is the
+The optional engineering setting
+`commissioning.experimental_damping.local_reference_enabled` defaults to
+`false` and requires confirmed assembly mass coverage. It adds a local,
+bidirectional residual check for J1–J6: a load can reduce the magnitude of an
+existing signed model error, so the original absolute-residual threshold may miss
+it. The whole-arm dynamics, raw residual and original absolute-residual channel
+remain in place. The local check uses each axis's signed unloaded residual
+minimum and maximum from one continuous initial stationary window, never a
+bounding interval accumulated across different windows. It independently filters
+the distance outside that interval, then subtracts the larger of the configured
+`policy.deadzone_nm` and four torque LSBs, plus the current model torque's distance
+outside its frozen model-torque interval, before confirming the remaining excess.
+The local channel therefore preserves the configured fixed deadzone. Each axis
+uses the larger eligible excess from the original
+and local channels, never their sum, with its existing full-output scale, power
+caps and rise/fall rates. It does not remove a residual mean or reproduce the
+direction of an external force on the Leader. The gripper has no local channel.
+
+The local channel requires all seven measured positions to remain near their
+frozen reference and all seven axes, including the raw gripper motor, to be
+stationary. Each arm-axis radius is the smaller of 2° and the session's
+`robot.max_target_step_deg` (default 2°); the gripper-opening radius is 0.02.
+These radii are engineering assumptions around a sampled pose, not evidence of
+unloaded coverage throughout that neighborhood. The model-torque allowance
+reduces, but cannot establish the absence of, local model error. Leaving this
+scope clears the local filter and confirmation state immediately; the original
+absolute-residual channel continues under its existing guards. The frozen
+reference is never extended or relearned while output is active. The dashboard
+reports whether the optional channel is enabled, currently eligible, or outside
+its local conditions, and which arm axes currently use it. This addresses one
+source of missed loads near a sampled pose; it is not a full-range force-feedback
+validation or a claim of verified hardware feel. Changing this option or policy
+requires a normal new binding. Web controls remain limited to power caps.
+
+For the original absolute-residual channel, a sustained static load on J4 alone
+produces its corresponding damping once that axis's filtered residual magnitude
+exceeds the current deadzone and satisfies load confirmation; other joints do
+not need to move. The pure ramp duration is the
 requested power change divided by the configured rise rate; filtering and
 confirmation add separate time. The rise-rate correction removes the extra
-experimental limiter where the contract permits it. The residual, deadzone, full-output torque scale and final intensity mapping are
-unchanged, so a small residual may still produce a small request. Software
+experimental limiter where the contract permits it, preserving the original
+absolute channel's residual, deadzone, full-output torque scale and final
+intensity mapping. A small eligible excess may still produce a small request. Software
 validation does not establish acceptance of physical damping feel.
 
 A complete real six-axis native release event is required for experimental

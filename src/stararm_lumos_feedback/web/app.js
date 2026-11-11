@@ -63,6 +63,16 @@ Object.assign(copy.zh, {
   formalForceBlocked:"正式力反馈尚未就绪。", experimentState:"实验状态", experimentLastReport:"最后报告的实验状态（当前未更新）", experimentCeiling:"额外实验功率上限", experimentNoExtraCap:"无；采用共同／每轴上限", experimentEffectiveCaps:"各轴当前有效上限", experimentEffectiveRise:"各轴当前上升速率", experimentFrozen:"启动基线已冻结", yes:"是", no:"否",
   experiment_waiting_baseline:"等待跟随到位并静止采集空载基线", experiment_active:"实验阻尼运行中", experiment_model_invalid:"模型无效，实验输出已停止",
   experiment_partially_active:"部分关节组阻尼运行中", baselineArm:"六轴 J1–J6", baselineGripper:"夹爪", baselineGroupFrozen:"已冻结", baselineGroupWaiting:"等待到位与静止", baselineGroupUnavailable:"启动时未就绪 本次阻尼为 0",
+  localReferenceTitle:"六轴局部双向参考", localReferenceLastReport:"六轴局部双向参考 最后报告 当前未更新",
+  localReferenceEnabled:"已启用", localReferenceDisabled:"未启用 沿用原绝对残差通道", localReferenceWaiting:"已启用 等待冻结参考", localReferenceOutside:"已启用 当前超出参考姿态范围",
+  localReferencePaused:"已启用 范围内 局部条件未满足", localReferenceWarming:"已启用 参考范围内 局部预热中", localReferenceEligible:"已启用 参考范围内 局部判定就绪", localReferenceActive:"已启用 参考范围内 正在采用局部通道",
+  localReferenceUnknown:"当前条件未确认", localReferenceAbsolute:"绝对残差", localReferenceLocal:"局部参考", localReferenceNone:"未触发", localReferenceUnavailable:"不可用",
+  localReferenceColumns:["轴","采用通道","局部有效超量 Nm","最终 Leader 请求 mW"],
+  localReferenceNote:"仅在参考姿态附近且七轴静止时可用，夹爪不使用局部通道。每轴取两通道较大有效超量，再经原上限和升降速率，不相加；范围外保留原通道。邻域是工程假设，未验证全行程或真机手感。",
+  local_reference_reason_disabled:"局部通道未启用，保留原绝对残差判定。", local_reference_reason_waiting_arm_baseline:"等待六轴首次空载基线冻结。",
+  local_reference_reason_local_reference_unavailable:"没有可用的单次连续静止窗口参考，本次不使用局部通道。", local_reference_reason_outside_reference_region:"七轴姿态超出局部参考范围，已清空局部滤波与确认状态。",
+  local_reference_reason_reference_motion:"七轴或夹爪原始电机仍有运动，局部通道暂停。", local_reference_reason_warming_local_reference:"当前在参考范围内，正在预热局部滤波与确认。",
+  local_reference_reason_local_reference_eligible:"局部条件已满足，逐轴按有效超量和负载确认判断。",
   experiment_reason_arm_active_gripper_baseline_unavailable:"六轴基线已完成，夹爪本次保持零阻尼；修正夹爪跟随后，空载重新启动可重新检查。",
   experiment_reason_gripper_active_arm_baseline_unavailable:"夹爪基线已完成，六轴本次保持零阻尼；六轴跟随到位后，空载重新启动可重新检查。",
   experiment_reason_baseline_admission_missing:"基线采集条件尚未确认，阻尼请求为 0。", experiment_reason_waiting_native_unlock:"等待收到完整真实按钮释放指令。",
@@ -87,6 +97,16 @@ Object.assign(copy.en, {
   formalForceBlocked:"Formal force feedback is not ready.", experimentState:"Experiment state", experimentLastReport:"Last reported experiment state (updates stopped)", experimentCeiling:"Additional experimental power cap", experimentNoExtraCap:"None; common/axis caps apply", experimentEffectiveCaps:"Current effective axis caps", experimentEffectiveRise:"Current axis rise rates", experimentFrozen:"Startup baseline frozen", yes:"Yes", no:"No",
   experiment_waiting_baseline:"Waiting for target arrival and stationary unloaded baseline", experiment_active:"Experimental damping active", experiment_model_invalid:"Model invalid; experimental output stopped",
   experiment_partially_active:"Damping active for qualified groups", baselineArm:"Arm J1–J6", baselineGripper:"Gripper", baselineGroupFrozen:"Frozen", baselineGroupWaiting:"Waiting for arrival and stationarity", baselineGroupUnavailable:"Unready at startup · Zero damping this session",
+  localReferenceTitle:"Local bidirectional arm reference", localReferenceLastReport:"Local bidirectional arm reference · Last report · Updates stopped",
+  localReferenceEnabled:"Enabled", localReferenceDisabled:"Disabled · Original absolute-residual channel", localReferenceWaiting:"Enabled · Waiting for a frozen reference", localReferenceOutside:"Enabled · Outside the reference pose region",
+  localReferencePaused:"Enabled · Within region · Local conditions not met", localReferenceWarming:"Enabled · Within region · Local warmup", localReferenceEligible:"Enabled · Within region · Local check ready", localReferenceActive:"Enabled · Within region · Local channel selected",
+  localReferenceUnknown:"Current conditions unconfirmed", localReferenceAbsolute:"Absolute residual", localReferenceLocal:"Local reference", localReferenceNone:"Not triggered", localReferenceUnavailable:"Unavailable",
+  localReferenceColumns:["Axis","Selected channel","Local effective excess Nm","Final Leader request mW"],
+  localReferenceNote:"Available only near the reference pose while all seven axes are stationary; the gripper has no local channel. Each axis takes the larger eligible excess, then applies the existing caps and ramps; channels are not added. The original channel remains outside this scope. This neighborhood is an engineering assumption, without full-range or hardware-feel validation.",
+  local_reference_reason_disabled:"The local channel is disabled; the original absolute-residual check remains.", local_reference_reason_waiting_arm_baseline:"Waiting for the initial unloaded arm baseline to freeze.",
+  local_reference_reason_local_reference_unavailable:"No single continuous stationary-window reference is available; the local channel is unavailable for this session.", local_reference_reason_outside_reference_region:"The seven-axis pose is outside the local region; local filter and confirmation state have been cleared.",
+  local_reference_reason_reference_motion:"A measured axis or the raw gripper motor is moving; the local channel is paused.", local_reference_reason_warming_local_reference:"Within the reference region; warming the local filter and confirmation.",
+  local_reference_reason_local_reference_eligible:"Local conditions are met; each axis still requires effective excess and load confirmation.",
   experiment_reason_arm_active_gripper_baseline_unavailable:"The arm baseline is ready; gripper damping remains zero this session. Correct gripper following and restart unloaded to check again.",
   experiment_reason_gripper_active_arm_baseline_unavailable:"The gripper baseline is ready; arm damping remains zero this session. Let the arm reach its target and restart unloaded to check again.",
   experiment_reason_baseline_admission_missing:"Baseline admission is unconfirmed; damping requests are 0.", experiment_reason_waiting_native_unlock:"Waiting for a complete real button-release command.",
@@ -437,6 +457,7 @@ function renderExperimental() {
   const experimental=state?.experimental, c=copy[lang];
   setVisible(panel,Boolean(experimental||availableModes(state?.connection).includes("experiment")||state?.mode==="experiment"));
   renderBaselineAdmission();
+  renderLocalReference();
   if(panel.hidden)return;
   const status=typeof experimental?.state==="string"?c["experiment_"+experimental.state]??experimental.state:"—";
   const frozen=typeof experimental?.baseline_frozen==="boolean"?(experimental.baseline_frozen?c.yes:c.no):"—";
@@ -469,6 +490,25 @@ function renderExperimental() {
   }
   const reason=experimental?.reason;
   $("experimentalReason").textContent=typeof reason==="string"?c[`experiment_reason_${reason}`]??reason:"";
+}
+function renderLocalReference() {
+  const panel=$("localReferencePanel");if(!panel)return;
+  const local=state?.experimental?.local_reference, c=copy[lang], fresh=telemetryFresh()&&state?.mode==="experiment";
+  setVisible(panel,Boolean(local));
+  if(!local)return;
+  const detail=local.enabled===false?c.localReferenceDisabled:local.enabled!==true?c.localReferenceUnknown:!fresh?`${c.localReferenceEnabled} · ${c.localReferenceUnknown}`:local.available!==true?c.localReferenceWaiting:local.in_region===false?c.localReferenceOutside:local.in_region!==true?c.localReferenceUnknown:local.reason==="warming_local_reference"?c.localReferenceWarming:local.eligible!==true?c.localReferencePaused:local.active===true?c.localReferenceActive:c.localReferenceEligible;
+  $("localReferenceStatus").textContent=`${fresh?c.localReferenceTitle:c.localReferenceLastReport}: ${detail}`;
+  const reason=local.reason;
+  $("localReferenceReason").textContent=fresh&&typeof reason==="string"?c[`local_reference_reason_${reason}`]??c[`experiment_reason_${reason}`]??c[`experiment_${reason}`]??reason:"";
+  const table=$("localReferenceTable"), visible=fresh&&local.enabled===true&&local.available===true;
+  setVisible(table,visible);
+  if(!visible)return;
+  cells($("localReferenceColumns"),c.localReferenceColumns,"th");
+  tableRows($("localReferenceRows"),Array.from({length:6},(_,i)=>{
+    const source=local.source?.[i], selected=local.eligible===true&&local.used_axes?.[i]===true;
+    const sourceText=selected?c.localReferenceLocal:source==="absolute"?c.localReferenceAbsolute:source==="none"?c.localReferenceNone:c.localReferenceUnavailable;
+    return [name(i),sourceText,fmt(local.eligible===true?local.excess_nm?.[i]:null),fmt(state.requested_mw?.[i])];
+  }));
 }
 function renderFollowDiagnostics() {
   if(!$("followRows"))return;

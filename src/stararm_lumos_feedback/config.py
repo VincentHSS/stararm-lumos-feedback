@@ -97,7 +97,10 @@ class Profile:
             state = self.commissioning
             experimental = state.get("experimental_damping") if isinstance(state, dict) else None
             if experimental is not None:
-                exact(experimental, "authorized unloaded_confirmed max_mw native_button_required", "experimental_damping")
+                experimental_keys = "authorized unloaded_confirmed max_mw native_button_required"
+                if isinstance(experimental, dict) and "local_reference_enabled" in experimental:
+                    experimental_keys += " local_reference_enabled"
+                exact(experimental, experimental_keys, "experimental_damping")
                 if (
                     experimental["authorized"] is not True
                     or experimental["unloaded_confirmed"] is not True
@@ -105,6 +108,13 @@ class Profile:
                 ):
                     raise ValueError("Experimental damping requires explicit authorization and an unloaded declaration")
                 experimental_ceiling(experimental["max_mw"], data)
+                local_reference = experimental.get("local_reference_enabled", False)
+                if type(local_reference) is not bool:
+                    raise ValueError("experimental_damping.local_reference_enabled must be a boolean")
+                if local_reference and data["mass_coverage"] not in (
+                    "urdf_includes_typelj", "explicit_typelj_payload",
+                ):
+                    raise ValueError("Local residual reference requires confirmed model mass coverage")
                 self.experimental_damping = dict(experimental)
             if (
                 not isinstance(state, dict)

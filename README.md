@@ -4,7 +4,11 @@ StarArm 102 主臂与 Lumos 从臂的遥操作、剩余力矩阻尼和本地三�
 
 Teleoperation, torque-residual damping and a local 3D dashboard for StarArm 102 and Lumos
 
-**Version 0.6.29** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+**Version 0.6.30** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+
+0.6.30 增加显式启用的六轴局部空载参考通道，处理某些方向受力后残差绝对值下降而漏判的问题。通道使用冻结的有符号空载区间，仅在参考姿态附近且七轴静止时检测区间两侧的变化；与原绝对残差通道取较大请求，沿用功率和速率限制。它仍是实验功能，不代表全行程空载分离或真机手感已验证，详细条件见[力反馈说明](docs/feedback.zh.md)。
+
+Version 0.6.30 adds an explicitly enabled local unloaded-reference channel for arm loads that reduce absolute residual torque. It detects departures on either side of a frozen signed interval only near the reference pose while all seven axes are stationary. It takes the larger request from this channel and the original absolute-residual channel, retaining power and slew limits. This remains experimental and does not establish unloaded separation over the full range or hardware feel; see the [feedback guide](docs/feedback.md).
 
 0.6.29 修复启动期间原生按钮接收中断：初始化前在原期限内收齐在途命令，预检与 SDK 初始化期间使用同一串口锁持续只读接收，退出后停止并等待接收线程再交回控制循环。完整六轴确认、250 ms 半组期限、限位及功率上限不变。
 
@@ -29,7 +33,7 @@ Version 0.6.27 adds optional TypeLJ following gains through the SDK distance int
 - 三维仅在已收姿态间插值，约 200 ms 显示缓冲；失鲜或停止后冻结最后实测姿态，不改变控制频率
 - 力反馈控制台的遥测在内存传递，只保留本机绑定和当前设置；本仓库不含标定、绑定、运行数据或构建安装包
 
-普通阻尼按剩余力矩绝对值调节强度，不精确复现带方向的外力。剩余力矩包含摩擦和模型误差，不能直接换算成准确末端力或重量。mW 是 Leader 请求值，不是实测机械阻力。当前实验路径关闭软件和自动 HOLD。
+普通阻尼默认按剩余力矩绝对值调节强度；显式启用的局部参考通道还检测冻结空载区间两侧的变化。两者均不精确复现带方向的外力。剩余力矩包含摩擦和模型误差，不能直接换算成准确末端力或重量。mW 是 Leader 请求值，不是实测机械阻力。当前实验路径关闭软件和自动 HOLD。
 
 ### 模式
 
@@ -86,7 +90,7 @@ This project extends the communication and paired mapping from [StarArm102 → L
 - Smooth presentation interpolates only received poses with about 200 ms of display buffering; stale or stopped state freezes at the latest measurement without changing control scheduling
 - Feedback telemetry is memory-only, with local bindings and current settings persisted separately; this repository includes no calibration, bindings, runtime data or built installers
 
-Ordinary damping follows residual magnitude rather than reproducing a precise signed external force. Residuals include friction and model error and cannot directly measure accurate end-effector force or weight. Leader mW values are requests, not measured mechanical resistance. Software and automatic HOLD are disabled in the experimental path.
+Ordinary damping uses residual magnitude by default; the explicitly enabled local reference also detects changes on either side of a frozen unloaded interval. Neither reproduces a precise signed external force. Residuals include friction and model error and cannot directly measure accurate end-effector force or weight. Leader mW values are requests, not measured mechanical resistance. Software and automatic HOLD are disabled in the experimental path.
 
 ### Modes
 

@@ -1,6 +1,8 @@
-# Software validation · 0.6.29
+# Software validation · 0.6.30
 
 ## 中文
+
+0.6.30 发布前，650 项软件测试全部通过，无跳过。新增 21 项局部参考回归覆盖受力使残差绝对值下降、双向与跨零变化、单次连续窗冻结、全七轴姿态和静止门控、原始夹爪速度、模型变化余量、固定死区不可绕过、独立预热和确认、缺帧／禁止输出／离开区域后的状态清除、有限卸载尾迹、功率上限以及原绝对残差通道兼容性。另有 2 项本机契约和绑定测试、1 项双语页面显示回归。Ruff、JavaScript 模块语法、Shell 语法和差异检查通过。局部邻域仍为工程假设；这些合成测试不证明全空间空载分离或真机阻尼手感。
 
 0.6.29 发布前，626 项软件测试全部通过，无跳过。新增 20 项回归覆盖初始化前补齐在途组、阻塞预检和 SDK 初始化期间持续接收、同批完整组后新半组、真实缺帧与原异常传播、取消、单读者串口锁、接收预算和线程停止交接。保留原 250 ms 半组期限、完整六轴确认和阻尼／运动保护。软件复现可重现并修复初始化暂停接收导致的同类错误，尚未确认本次真机故障的实际帧到达时间，也未验证新版真机手感。
 
@@ -24,6 +26,8 @@ git diff --check -- . ':!tests/fixtures/sdk_0404125_pybind_constructor.cpp'
 软件测试通过不代表真机跟随、全姿态空载分离、带载响应、原生按钮仲裁或阻尼手感已验收。显示插值不会修复 CAN 缺帧。单姿态空载基线不能证明所有运动状态下均无误阻尼；剩余力矩不是准确末端力。`experiment` 仍为实验功能，`run` 需要另行审核的本机配置与授权。
 
 ## English
+
+All 650 software tests passed without skips before the 0.6.30 release. Twenty-one local-reference regressions cover loads that reduce absolute residual, both directions and zero crossing, a single continuous reference window, seven-axis pose and stationary gates, raw gripper velocity, model-change allowances, the fixed-deadzone floor, independent warmup and confirmation, state clearing after gaps/inhibition/out-of-region conditions, finite unloading decay, caps and compatibility with the original absolute channel. Two contract/binding tests and one bilingual dashboard regression were also added. Ruff, JavaScript module syntax, shell syntax and diff checks passed. The local neighborhood remains an engineering assumption; synthetic tests do not establish unloaded separation over the whole workspace or hardware damping feel.
 
 All 626 software tests passed without skips before the 0.6.29 release. Twenty added regressions cover pending-group completion, RX continuity through blocking preflight and SDK initialization, a new partial group following a complete group in one read, real missing frames and original exception propagation, cancellation, single-reader UART locking, receive budgets and stopped/joined handoff. The 250 ms group deadline, six-axis confirmation and existing motion/damping guards remain. The software reproduction fixes a matching error caused by interrupted startup reception; arrival times in the failed physical session and the new hardware behavior remain unverified.
 

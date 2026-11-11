@@ -84,6 +84,28 @@ class ExperimentSessionTests(FixtureCase):
         with self.assertRaisesRegex(ValueError, "explicit engineering"):
             Session(profile, robot, leader, Caps(), mode="experiment")
 
+    def test_local_reference_is_explicit_boolean_and_requires_confirmed_mass(self):
+        options = self.data["commissioning"]["experimental_damping"]
+        self.assertNotIn("local_reference_enabled", self.profile_for().experimental_damping)
+        options["local_reference_enabled"] = False
+        without_reference = self.profile_for().binding()
+        options["local_reference_enabled"] = True
+        with self.assertRaisesRegex(ValueError, "confirmed model mass"):
+            self.profile_for()
+        self.data.update(mass_coverage="urdf_includes_typelj", payload=None)
+        self.assertTrue(self.profile_for().experimental_damping["local_reference_enabled"])
+        self.assertNotEqual(self.profile_for().binding(), without_reference)
+        for value in (0, 1, None, "true", {}, []):
+            with self.subTest(value=value):
+                options["local_reference_enabled"] = value
+                with self.assertRaisesRegex(ValueError, "must be a boolean"):
+                    self.profile_for()
+
+    def test_local_reference_cannot_be_enabled_by_an_unknown_contract_field(self):
+        self.data["commissioning"]["experimental_damping"]["local_reference_enable"] = True
+        with self.assertRaisesRegex(ValueError, "expected fields"):
+            self.profile_for()
+
     def test_explicit_web_mode_available_but_formal_run_stays_blocked(self):
         profile = self.profile_for("inspect")
         dashboard = SimpleNamespace(publish=lambda **state: None)

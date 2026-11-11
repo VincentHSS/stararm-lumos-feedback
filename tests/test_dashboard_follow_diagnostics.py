@@ -239,6 +239,42 @@ async function main(){
     assert.ok(nodes.get("experimentalReason").textContent.includes("gripper damping remains zero this session"));
     assert.equal(nodes.get("baselineAdmissionRows").children[6],row,"Language switch rebuilt diagnostic rows");
     assert.equal(requests.length,0,"Group status sent a hardware command");
+  }else if(scenario==="local_reference"){
+    run(`
+      state.mode="experiment";state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();
+      state.experimental={state:"active",local_reference:{enabled:true,available:true,in_region:true,
+        eligible:true,active:true,source:["none","none","none","local_reference","none","none"],
+        used_axes:[false,false,false,true,false,false],excess_nm:[0,0,0,0.2,0,0]}};
+      state.requested_mw=[0,0,0,240,0,0,0];render();
+    `);
+    assert.equal(nodes.get("localReferencePanel").hidden,false);
+    assert.equal(nodes.get("localReferenceTable").hidden,false);
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("正在采用局部通道"));
+    assert.equal(nodes.get("localReferenceRows").children.length,6,"Gripper entered the arm reference channel");
+    assert.equal(text("localReferenceRows",3,1),"局部参考");
+    assert.equal(text("localReferenceRows",3,2),"0.20");
+    assert.equal(text("localReferenceRows",3,3),"240.00");
+    const row=nodes.get("localReferenceRows").children[3],cell=row.children[3];
+    run('lang="en";translate()');
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Local channel selected"));
+    assert.equal(text("localReferenceRows",3,1),"Local reference");
+    assert.equal(nodes.get("localReferenceRows").children[3],row,"Language change rebuilt reference rows");
+    assert.equal(row.children[3],cell);
+    run('state.experimental.local_reference.reason="warming_local_reference";state.experimental.local_reference.active=false;render()');
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Local warmup"),"Warmup was presented as ready");
+    run('delete state.experimental.local_reference.reason');
+    run('state.experimental.local_reference.in_region=false;state.experimental.local_reference.eligible=false;state.experimental.local_reference.active=false;state.experimental.local_reference.used_axes=Array(6).fill(false);state.experimental.local_reference.source=Array(6).fill("absolute");render()');
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Outside the reference pose region"));
+    assert.equal(text("localReferenceRows",3,2),"—","Out-of-region local excess was presented as eligible");
+    run('state.status="stopped";state.telemetry_fresh=false;render()');
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Last report"));
+    assert.equal(nodes.get("localReferenceTable").hidden,true,"Stopped reference was shown as live output");
+    run('state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();state.experimental.local_reference={enabled:false};render()');
+    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Disabled"));
+    run('delete state.experimental.local_reference;render()');
+    assert.equal(nodes.get("localReferencePanel").hidden,true,"Legacy state was shown as a local reference");
+    assert.equal(JSON.stringify(run('Object.keys(copy.zh).sort()')),JSON.stringify(run('Object.keys(copy.en).sort()')));
+    assert.equal(requests.length,0,"Local reference display sent a command");
   }else if(scenario==="tracking"){
     assert.equal(nodes.get("followRows").children.length,6);
     assert.equal(text("followRows",0,1),"—");
@@ -323,3 +359,6 @@ class FollowDiagnosticsTests(unittest.TestCase):
 
     def test_partial_baseline_reports_ready_arm_and_unavailable_gripper_in_both_languages(self):
         self.run_scenario("partial_baseline")
+
+    def test_local_reference_reports_scope_and_selection_without_commands_or_stale_output(self):
+        self.run_scenario("local_reference")
