@@ -294,9 +294,26 @@ class Session:
             arrival_error=None, arrival_tolerance=None,
             target_blocked_axes=None, arrival_blocked_axes=None, blocked_axes=None,
         )
+        groups = {"arm": list(range(6)), "gripper": [6]}
 
         def result(allowed, reason):
-            admission = dict(allowed=allowed, reason=reason, **diagnostics)
+            admission = dict(
+                allowed=allowed, reason=reason, common_allowed=diagnostics["target_error"] is not None,
+                **diagnostics,
+                groups={
+                    name: dict(allowed=allowed, reason=reason, axis_indices=indices.copy())
+                    for name, indices in groups.items()
+                },
+            )
+            if diagnostics["target_error"] is not None:
+                for name, indices in groups.items():
+                    target_waiting = any(abs(target_error[i]) > target_tolerance[i] for i in indices)
+                    arrival_waiting = any(abs(arrival_error[i]) > arrival_tolerance[i] for i in indices)
+                    admission["groups"][name].update(
+                        allowed=not target_waiting and not arrival_waiting,
+                        reason="waiting_follow_target" if target_waiting else
+                        "waiting_follower_settled" if arrival_waiting else "baseline_admission_allowed",
+                    )
             # Retain the last actual admission check across adapter cleanup.
             # Publishing must not recheck native events or infer gripper
             # targets from the next command sent later in this cycle.

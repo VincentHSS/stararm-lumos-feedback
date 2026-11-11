@@ -1,4 +1,4 @@
-# StarArm → Lumos force feedback · 0.6.26
+# StarArm → Lumos force feedback · 0.6.28
 
 Version 0.6.26 adds seven-axis baseline admission diagnostics, including normalized gripper opening. The dashboard shows each blocking axis's target, sent and measured values with errors and tolerances while waiting for the first baseline. Stopped, stale or frozen-baseline sessions do not show this as a live blocker. This is diagnostic only; thresholds, admission ordering and damping policy are unchanged.
 
@@ -38,7 +38,7 @@ shows each axis's effective rise rate. All software and automatic HOLD requests
 remain disabled. mW is a Leader request, not measured mechanical resistance or a
 safety rating.
 
-The initial unloaded baseline is collected only after a complete real button release, at least one complete successful following write, the end of target-rate catch-up and measured proximity to the target. Both the target and measured pose must remain stationary for at least two seconds. Button waiting, supported startup poses and initial approach cannot qualify. Arrival uses the original joint-limit-clipped target without enlarging travel. Once frozen, the baseline is never relearned on button changes or new external loads. This gate corrects startup sampling timing; a single-pose baseline still cannot establish unloaded separation over the entire motion range.
+Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
 A sustained static load on J4 alone produces its corresponding damping once that
 axis's filtered residual exceeds the current deadzone and satisfies load

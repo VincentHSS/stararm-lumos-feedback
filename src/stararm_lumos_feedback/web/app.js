@@ -58,10 +58,13 @@ const validStartupPose = value => ["home","current_aligned","current_relative","
 let lang = readPreference("lumos-language") === "en" ? "en" : "zh";
 Object.assign(copy.zh, {
   experiment:"跟随＋实验阻尼", startExperiment:"启动实验阻尼",
-  experimentNote:"按钮释放且跟随到位后，目标与实测静止至少 2 秒才采集冻结空载基线；运行中不重学外载。各轴实际上升速率见下方，无自动 HOLD。单姿态基线未覆盖全部运动范围，实验状态不代表真机效果已验证。",
+  experimentNote:"六轴与夹爪分别检查跟随到位，七轴实测均须静止至少 2 秒。首组完成后冻结当时已就绪的基线，未就绪组本次保持零阻尼，运行中不再补采。各轴实际上升速率见下方，无自动 HOLD。单姿态基线未覆盖全部运动范围，实验状态不代表真机效果已验证。",
   experimentPowerNote:"每轴有效上限为共同与该轴上限的较小值；实际请求随负载变化。默认共同／每轴上限 1200 mW，共同可调 400–1500 mW，各轴可调 0–1500 mW；每轴 0 关闭该轴阻尼。实验无自动或软件 HOLD。mW 是 Leader 请求值。",
   formalForceBlocked:"正式力反馈尚未就绪。", experimentState:"实验状态", experimentLastReport:"最后报告的实验状态（当前未更新）", experimentCeiling:"额外实验功率上限", experimentNoExtraCap:"无；采用共同／每轴上限", experimentEffectiveCaps:"各轴当前有效上限", experimentEffectiveRise:"各轴当前上升速率", experimentFrozen:"启动基线已冻结", yes:"是", no:"否",
   experiment_waiting_baseline:"等待跟随到位并静止采集空载基线", experiment_active:"实验阻尼运行中", experiment_model_invalid:"模型无效，实验输出已停止",
+  experiment_partially_active:"部分关节组阻尼运行中", baselineArm:"六轴 J1–J6", baselineGripper:"夹爪", baselineGroupFrozen:"已冻结", baselineGroupWaiting:"等待到位与静止", baselineGroupUnavailable:"启动时未就绪 本次阻尼为 0",
+  experiment_reason_arm_active_gripper_baseline_unavailable:"六轴基线已完成，夹爪本次保持零阻尼；修正夹爪跟随后，空载重新启动可重新检查。",
+  experiment_reason_gripper_active_arm_baseline_unavailable:"夹爪基线已完成，六轴本次保持零阻尼；六轴跟随到位后，空载重新启动可重新检查。",
   experiment_reason_baseline_admission_missing:"基线采集条件尚未确认，阻尼请求为 0。", experiment_reason_waiting_native_unlock:"等待收到完整真实按钮释放指令。",
   experiment_reason_waiting_first_follow_command:"等待完成首组完整跟随发送，尚不采集基线。", experiment_reason_waiting_follow_target:"正在限速接近 Leader 目标，尚不采集基线。",
   experiment_reason_waiting_follower_settled:"等待从臂实测位置接近已发送目标。", experiment_reason_waiting_stable_follow_target:"Leader 目标有变化，重新等待连续静止。",
@@ -79,10 +82,13 @@ Object.assign(copy.zh, {
 });
 Object.assign(copy.en, {
   experiment:"Following + experimental damping", startExperiment:"Start experimental damping",
-  experimentNote:"After button release and target arrival, the target and measured pose must remain stationary for at least 2 seconds before the unloaded baseline freezes; external loads are never relearned during output. Actual axis rise rates are shown below, with no automatic HOLD. A single pose does not cover the full motion range, and experiment status does not establish hardware performance validation.",
+  experimentNote:"Arm and gripper target arrival are checked separately; all seven measured axes must remain stationary for at least 2 seconds. When the first group qualifies, all groups ready at that time freeze. Other groups keep zero damping for this session and are never learned during output. Actual axis rise rates are shown below, with no automatic HOLD. A single pose does not cover the full motion range, and experiment status does not establish hardware performance validation.",
   experimentPowerNote:"Each effective cap is the smaller of the common and axis caps; actual requests vary with load. Common/axis defaults are 1200 mW. The common cap is adjustable from 400–1500 mW and each axis from 0–1500 mW; 0 disables that axis. Experimental mode has no automatic or software HOLD. mW is a Leader request.",
   formalForceBlocked:"Formal force feedback is not ready.", experimentState:"Experiment state", experimentLastReport:"Last reported experiment state (updates stopped)", experimentCeiling:"Additional experimental power cap", experimentNoExtraCap:"None; common/axis caps apply", experimentEffectiveCaps:"Current effective axis caps", experimentEffectiveRise:"Current axis rise rates", experimentFrozen:"Startup baseline frozen", yes:"Yes", no:"No",
   experiment_waiting_baseline:"Waiting for target arrival and stationary unloaded baseline", experiment_active:"Experimental damping active", experiment_model_invalid:"Model invalid; experimental output stopped",
+  experiment_partially_active:"Damping active for qualified groups", baselineArm:"Arm J1–J6", baselineGripper:"Gripper", baselineGroupFrozen:"Frozen", baselineGroupWaiting:"Waiting for arrival and stationarity", baselineGroupUnavailable:"Unready at startup · Zero damping this session",
+  experiment_reason_arm_active_gripper_baseline_unavailable:"The arm baseline is ready; gripper damping remains zero this session. Correct gripper following and restart unloaded to check again.",
+  experiment_reason_gripper_active_arm_baseline_unavailable:"The gripper baseline is ready; arm damping remains zero this session. Let the arm reach its target and restart unloaded to check again.",
   experiment_reason_baseline_admission_missing:"Baseline admission is unconfirmed; damping requests are 0.", experiment_reason_waiting_native_unlock:"Waiting for a complete real button-release command.",
   experiment_reason_waiting_first_follow_command:"Waiting for the first complete successful following write; baseline collection has not started.", experiment_reason_waiting_follow_target:"Approaching the Leader target through rate limits; baseline collection has not started.",
   experiment_reason_waiting_follower_settled:"Waiting for measured Follower positions to approach the sent target.", experiment_reason_waiting_stable_follow_target:"The Leader target changed; restarting the stationary wait.",
@@ -412,11 +418,11 @@ const feedbackStartMode = connection => availableModes(connection).includes("exp
 function renderBaselineAdmission() {
   const panel=$("baselineAdmissionPanel"), body=$("baselineAdmissionRows");if(!panel||!body)return;
   const admission=state?.baseline_admission, c=copy[lang];
-  const waiting=state?.mode==="experiment"&&state?.experimental?.state==="waiting_baseline"&&state.experimental.baseline_frozen===false&&telemetryFresh()&&admission?.allowed===false;
+  const waiting=state?.mode==="experiment"&&["waiting_baseline","partially_active"].includes(state?.experimental?.state)&&state.experimental.baseline_frozen===false&&telemetryFresh()&&admission?.allowed===false;
   const value=(key,i)=>Array.isArray(admission?.[key])?admission[key][i]:null;
   const fields=["target","sent_target","measured_position","target_error","target_tolerance","arrival_error","arrival_tolerance"];
   const blocked=i=>Array.isArray(admission?.blocked_axes)&&(admission.blocked_axes.includes(i)||admission.blocked_axes.includes(value("axis_names",i)));
-  const visible=Array.from({length:7},(_,i)=>waiting&&blocked(i)&&value("axis_names",i)===(i<6?`J${i+1}`:"gripper")&&value("axis_units",i)===(i<6?"rad":"normalized_opening")&&fields.every(key=>Number.isFinite(value(key,i)))&&value("target_tolerance",i)>=0&&value("arrival_tolerance",i)>=0);
+  const visible=Array.from({length:7},(_,i)=>waiting&&state.experimental?.baseline_ready_axes?.[i]!==true&&blocked(i)&&value("axis_names",i)===(i<6?`J${i+1}`:"gripper")&&value("axis_units",i)===(i<6?"rad":"normalized_opening")&&fields.every(key=>Number.isFinite(value(key,i)))&&value("target_tolerance",i)>=0&&value("arrival_tolerance",i)>=0);
   setVisible(panel,visible.some(Boolean));
   cells($("baselineAdmissionColumns"),c.baselineAdmissionColumns,"th");
   // Keep one row per axis even when its gate clears so polling does not replace
@@ -438,6 +444,14 @@ function renderExperimental() {
   const ceiling=experimental?.ceiling_mw;
   const ceilingText=ceiling===null?c.experimentNoExtraCap:Number.isFinite(ceiling)?`${fmt(ceiling)} mW`:"—";
   $("experimentalStatus").textContent=`${label}: ${status} · ${c.experimentCeiling}: ${ceilingText} · ${c.experimentFrozen}: ${frozen}`;
+  if($("experimentalBaselines")){
+    const groups=experimental?.baseline_groups;
+    setVisible($("experimentalBaselines"),Boolean(groups));
+    $("experimentalBaselines").textContent=groups?[['arm',c.baselineArm],['gripper',c.baselineGripper]].map(([key,title])=>{
+      const group=groups[key], detail=group?.frozen===true?c.baselineGroupFrozen:experimental.baseline_collection_closed===true?c.baselineGroupUnavailable:c.baselineGroupWaiting;
+      return `${title}: ${detail}`;
+    }).join(" · "):"";
+  }
   if($("experimentalCaps")){
     const reported=experimental?.effective_caps_mw;
     const caps=Array.from({length:7},(_,i)=>{

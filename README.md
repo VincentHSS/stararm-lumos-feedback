@@ -4,7 +4,11 @@ StarArm 102 主臂与 Lumos 从臂的遥操作、剩余力矩阻尼和本地三�
 
 Teleoperation, torque-residual damping and a local 3D dashboard for StarArm 102 and Lumos
 
-**Version 0.6.27** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+**Version 0.6.28** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+
+0.6.28 修复夹爪未到位时连带阻断六轴阻尼的问题。六轴和夹爪分别检查启动基线资格，仍要求七轴实测静止；首组完成后关闭采集，未就绪组本次保持零阻尼。六轴继续使用整臂动力学，保留各组到位检查，页面分别显示基线状态。
+
+Version 0.6.28 separates arm and gripper startup-baseline admission. An unsettled gripper no longer blocks a qualified arm. All seven measured axes must still be stationary. The first qualification closes collection; unready groups keep zero damping for the session. Whole-arm dynamics and group arrival checks remain in place, with group status shown in the dashboard.
 
 0.6.27 增加可选 TypeLJ 跟随增益：保留 SDK 初始化默认值，在跟随时通过距离接口发送增益，并在两端各 10% 开度内平滑回到 SDK 默认增益。沿用七轴基线到位诊断；保护阈值和阻尼策略不变。
 
@@ -116,6 +120,6 @@ Documentation: [Feedback configuration](docs/feedback.md) · [Hardware startup](
 | `tests/` | Device-free regression tests / 无设备回归测试 |
 | `tools/` | Model checks, SDK compatibility and source export / 模型检查、SDK 兼容与源码导出 |
 
-593 software tests passed for 0.6.27. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
+606 software tests passed for 0.6.28. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
 
-0.6.27 已通过 593 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
+0.6.28 已通过 606 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。

@@ -1,4 +1,4 @@
-# 0.6.24 hardware startup
+# 0.6.28 hardware startup
 
 Version 0.6.24 applies each bound axis `limit_margin` consistently to measured positions before and after startup, matching CAN checks so half an encoder step near zero is not rejected by a later strict measurement check. Raw measurements and baseline anchors are preserved. Initial position commands and relative-start references stay clipped to the original limits; Leader target limits are unchanged. Measurements beyond the existing margin still fail. Recalibration is not required; changed source requires normal rebinding.
 
@@ -34,7 +34,7 @@ shows each axis's effective rise rate. All software and automatic HOLD requests
 remain disabled. mW is a Leader request, not measured mechanical resistance or a
 safety rating.
 
-The initial unloaded baseline is collected only after a complete real button release, at least one complete successful following write, the end of target-rate catch-up and measured proximity to the target. Both the target and measured pose must remain stationary for at least two seconds. Button waiting, supported startup poses and initial approach cannot qualify. Arrival uses the original joint-limit-clipped target without enlarging travel. Once frozen, the baseline is never relearned on button changes or new external loads. This gate corrects startup sampling timing; a single-pose baseline still cannot establish unloaded separation over the entire motion range.
+Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
 A sustained static load on J4 alone produces its corresponding damping once that
 axis's filtered residual exceeds the current deadzone and satisfies load

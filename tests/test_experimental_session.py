@@ -240,6 +240,119 @@ class ExperimentSessionTests(FixtureCase):
             session.initial_baseline_admission(session.monitor.snapshot())["reason"], "waiting_follower_settled",
         )
 
+    def assert_baseline_groups(self, admission, *, arm_reason, gripper_reason):
+        self.assertEqual(admission["groups"], {
+            "arm": {
+                "allowed": arm_reason == "baseline_admission_allowed",
+                "reason": arm_reason,
+                "axis_indices": list(range(6)),
+            },
+            "gripper": {
+                "allowed": gripper_reason == "baseline_admission_allowed",
+                "reason": gripper_reason,
+                "axis_indices": [6],
+            },
+        })
+
+    def test_gripper_static_error_allows_whole_arm_admission_without_widening_tolerances(self):
+        session, _, robot, _ = self.baseline_session()
+        session._baseline_completed_send = [0] * 6 + [0.5]
+        settled_admission = session.initial_baseline_admission(self.samples(0))
+        samples = self.samples(1, q=[0] * 6 + [0.4341])
+        before = deepcopy((session.desired, session._baseline_completed_send, robot.limits,
+                           session.profile.gripper_transform))
+
+        admission = session.initial_baseline_admission(samples)
+
+        self.assertFalse(admission["allowed"])
+        self.assertEqual(admission["reason"], "waiting_follower_settled")
+        self.assert_baseline_groups(
+            admission, arm_reason="baseline_admission_allowed", gripper_reason="waiting_follower_settled",
+        )
+        self.assertAlmostEqual(admission["arrival_error"][6], -0.0659)
+        # The public fixture's bound motor uncertainty maps to >2% opening.
+        # Splitting the groups must preserve that existing tolerance too.
+        self.assertGreaterEqual(admission["arrival_tolerance"][6], 0.02)
+        self.assertEqual(admission["target_tolerance"], settled_admission["target_tolerance"])
+        self.assertEqual(admission["arrival_tolerance"], settled_admission["arrival_tolerance"])
+        self.assertEqual(admission["blocked_axes"], ["gripper"])
+        self.assertEqual((session.desired, session._baseline_completed_send, robot.limits,
+                          session.profile.gripper_transform), before)
+
+    def test_one_arm_joint_not_arrived_blocks_all_six_arm_axes_only(self):
+        session, _, _, _ = self.baseline_session()
+        session._baseline_completed_send = [0] * 6 + [0.5]
+        samples = self.samples(1, q=[0, 0, 0, 0.09, 0, 0, 0.5])
+
+        admission = session.initial_baseline_admission(samples)
+
+        self.assertFalse(admission["allowed"])
+        self.assertEqual(admission["reason"], "waiting_follower_settled")
+        self.assert_baseline_groups(
+            admission, arm_reason="waiting_follower_settled", gripper_reason="baseline_admission_allowed",
+        )
+        self.assertEqual(admission["blocked_axes"], ["J4"])
+        self.assertAlmostEqual(admission["arrival_tolerance"][3], math.radians(2))
+
+    def test_target_limiter_catchup_blocks_only_its_own_baseline_group(self):
+        for axis, target, arm_reason, gripper_reason in (
+            (3, 0.4, "waiting_follow_target", "baseline_admission_allowed"),
+            (6, 0.8, "baseline_admission_allowed", "waiting_follow_target"),
+        ):
+            with self.subTest(axis=axis):
+                session, _, _, _ = self.baseline_session()
+                session._baseline_completed_send = [0] * 6 + [0.5]
+                session.desired[axis] = target
+
+                admission = session.initial_baseline_admission(self.samples(1))
+
+                self.assertFalse(admission["allowed"])
+                self.assertEqual(admission["reason"], "waiting_follow_target")
+                self.assert_baseline_groups(admission, arm_reason=arm_reason, gripper_reason=gripper_reason)
+                self.assertEqual(admission["target_blocked_axes"], ["J4" if axis == 3 else "gripper"])
+                self.assertEqual(admission["arrival_blocked_axes"], [])
+
+    def test_common_admission_prerequisites_block_both_groups_with_same_reason(self):
+        for condition, reason in (
+            ("native_unconfirmed", "waiting_native_unlock"),
+            ("no_complete_send", "waiting_first_follow_command"),
+            ("partial_send", "baseline_admission_missing"),
+            ("missing_feedback", "baseline_admission_missing"),
+            ("invalid_limits", "baseline_admission_missing"),
+        ):
+            with self.subTest(condition=condition):
+                session, _, robot, _ = self.baseline_session(released=condition != "native_unconfirmed")
+                session._baseline_completed_send = [0] * 6 + [0.5]
+                samples = self.samples(1)
+                if condition == "no_complete_send":
+                    session._baseline_completed_send = None
+                elif condition == "partial_send":
+                    session._baseline_completed_send = [0] * 6
+                elif condition == "missing_feedback":
+                    samples = samples[:6]
+                elif condition == "invalid_limits":
+                    robot.limits = ([0] * 6, [0] * 6)
+
+                admission = session.initial_baseline_admission(samples)
+
+                self.assertFalse(admission["allowed"])
+                self.assertEqual(admission["reason"], reason)
+                self.assert_baseline_groups(admission, arm_reason=reason, gripper_reason=reason)
+                self.assertIsNone(admission["target_error"])
+                self.assertIsNone(admission["arrival_error"])
+
+    def test_both_baseline_groups_allow_once_their_own_targets_arrive(self):
+        session, _, _, _ = self.baseline_session()
+        session._baseline_completed_send = [0] * 6 + [0.5]
+
+        admission = session.initial_baseline_admission(self.samples(1))
+
+        self.assertTrue(admission["allowed"])
+        self.assert_baseline_groups(
+            admission, arm_reason="baseline_admission_allowed", gripper_reason="baseline_admission_allowed",
+        )
+        self.assertEqual(admission["blocked_axes"], [])
+
     def test_baseline_diagnostics_identify_target_and_arrival_axes_in_their_real_units(self):
         session, _, _, _ = self.baseline_session()
         session.desired = [0, 0, 0, 0.4, 0, 0, 0.8]
@@ -350,7 +463,10 @@ class ExperimentSessionTests(FixtureCase):
         session, _, _, button = self.baseline_session(released=False)
         sequence, now = 0, 100.0
         session.controller.clock = lambda: now
-        q = [0] * 6 + [0.5]
+        # Keep both groups unqualified through the staged startup checks.
+        # Otherwise an already-arrived gripper can validly close the initial
+        # unloaded window before this test reaches arm arrival.
+        q = [0] * 6 + [0.4]
 
         def advance(count):
             nonlocal sequence, now
@@ -379,6 +495,7 @@ class ExperimentSessionTests(FixtureCase):
         advance(130)  # Sent target arrived; measured Follower still has not.
         self.assertEqual(session.controller.snapshot()["reason"], "waiting_follower_settled")
         q[3] = 0.49
+        q[6] = 0.5
         advance(70)
         self.assertFalse(session.controller.snapshot()["baseline_frozen"])
         advance(40)

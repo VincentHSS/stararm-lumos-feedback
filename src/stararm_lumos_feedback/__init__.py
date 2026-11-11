@@ -3,4 +3,4 @@
 Importing this package never imports a device SDK or constructs a robot.
 """
 
-__version__ = "0.6.27"
+__version__ = "0.6.28"

@@ -544,3 +544,10 @@ Leader 目标、实测接近，以及目标／实测连续静止；保留两秒�
 不扩大行程，不修改质量／重心／惯量、力矩方向、映射增益或运动速度。冻结后不再
 从后续负载更新基线。该门控校正采集时机，其他姿态的空载分离仍需明确空载观察，
 不能由一个姿态推断。
+
+
+### 0.6.28 baseline admission groups / 基线准入分组
+
+Arm and gripper now have separate arrival admission and startup baseline statistics. Both estimators still require seven-axis measured stationarity. The first successful group closes collection: groups ready in that cycle freeze, and remaining groups keep zero damping until a new session. No baseline is learned while qualified damping runs. The six arm axes still use one whole-arm inverse-dynamics calculation. Physical ranges, tolerances, native button handling and SDK initialization are unchanged.
+
+六轴和夹爪分别检查到位并保存启动基线统计，两个估计器仍要求七轴实测静止。首组成功时关闭采集：当周期已就绪组冻结，其余组本次会话保持零阻尼，不在已启用阻尼期间补学。六轴仍使用整臂逆动力学一次计算。物理范围、允差、原生按钮处理及 SDK 初始化不变。

@@ -1,8 +1,8 @@
-# Software validation · 0.6.27
+# Software validation · 0.6.28
 
 ## 中文
 
-0.6.27 发布前，593 项软件测试全部通过，无跳过。Ruff、JavaScript 模块语法、Shell 语法及差异空白检查通过。新增 12 项测试覆盖可选夹爪增益、米与归一化开度的接口转换、端点平滑过渡、初始化 YAML 不变、预览无写入、取消与 SDK 拒绝。原有七轴到位门控和物理范围检查仍保留。发布整理清理说明中的本机历史，不分发本机参数或运行数据。
+0.6.28 发布前，606 项软件测试全部通过，无跳过。Ruff、JavaScript 模块语法、Shell 语法及差异空白检查通过。新增 13 项回归覆盖六轴／夹爪分组准入与静止窗口、夹爪静差不再阻断已就绪六轴、J4 独立负载响应、公共条件不可被分组覆盖、首组完成后关闭采集且运行中不补学、故障全轴归零，以及中英文分组显示与稳定 DOM。到位阈值、物理范围、整臂动力学、原生按钮及 SDK 初始化保持原实现。
 
 覆盖范围包括整臂动力学与坐标单位、映射、限位、滤波及目标限速；CAN 时效、故障、温度、位置跳变与 SDK/CAN 一致性；按钮协议、原生事件门控、会话所有权、取消和清理；实验功率与速率契约、加速度观察器和空载基线采集时机；实测边界余量与严格目标边界；网页配置边界、稳定 DOM 和草稿；三维已收样本插值、不外推、失鲜冻结、静止停帧；SDK 构造函数及原生量程修正的源码回归。
 
@@ -23,7 +23,7 @@ git diff --check -- . ':!tests/fixtures/sdk_0404125_pybind_constructor.cpp'
 
 ## English
 
-All 593 software tests passed without skips before the 0.6.27 release. Ruff, JavaScript module syntax, shell syntax and diff whitespace checks also passed. Twelve new regressions cover optional gripper gains, normalized-opening/metre conversion, smooth endpoint transitions, unchanged initialization YAML, preview without writes, cancellation and SDK rejection. Existing seven-axis admission and physical range checks remain intact. Publication edits remove machine-specific documentary history; local parameters and runtime data are excluded.
+All 606 software tests passed without skips before the 0.6.28 release. Ruff, JavaScript module syntax, shell syntax and diff whitespace checks also passed. Thirteen added regressions cover grouped arm/gripper admission and stationary windows, gripper arrival error without blocking a qualified arm, independent J4 load response, mandatory common admission, collection closing before output without later learning, common-fault zero output, and bilingual group status with stable DOM. Arrival tolerances, physical ranges, whole-arm dynamics, native-button handling and SDK initialization are unchanged.
 
 Coverage includes whole-arm dynamics and coordinate conversion; mapping, filtering and target limits; CAN freshness and faults; temperature, position and SDK/CAN agreement; button protocols and native-event gating; session ownership, cancellation and cleanup; experimental power/slew contracts and baseline timing; measured margins versus strict command limits; web API and immutable policies; stable DOM and cap drafts; motion preferences; received-pose interpolation without extrapolation; stale freezing and idle rendering; and source regressions for the SDK constructor and motor-range compatibility patches.
 

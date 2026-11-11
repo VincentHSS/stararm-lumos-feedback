@@ -212,6 +212,33 @@ async function main(){
     run('state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();state.baseline_admission.blocked_axes=null;render()');
     assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Unavailable gate data was presented as an axis failure");
     assert.equal(requests.length,0,"Displaying baseline diagnostics sent a command");
+  }else if(scenario==="partial_baseline"){
+    run(`
+      state.mode="experiment";state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();
+      state.experimental={state:"partially_active",ceiling_mw:null,baseline_frozen:false,
+        baseline_collection_closed:true,baseline_ready_axes:[true,true,true,true,true,true,false],
+        baseline_groups:{arm:{frozen:true},gripper:{frozen:false}},
+        reason:"arm_active_gripper_baseline_unavailable"};
+      state.baseline_admission={allowed:false,axis_names:["J1","J2","J3","J4","J5","J6","gripper"],
+        axis_units:["rad","rad","rad","rad","rad","rad","normalized_opening"],
+        target:Array(7).fill(0.5),sent_target:Array(7).fill(0.5),measured_position:Array(7).fill(0.4341),
+        target_error:Array(7).fill(0),target_tolerance:Array(7).fill(0.02),
+        arrival_error:Array(7).fill(-0.0659),arrival_tolerance:Array(7).fill(0.02),
+        blocked_axes:["J4","gripper"]};render();
+    `);
+    assert.ok(nodes.get("experimentalStatus").textContent.includes("部分关节组阻尼运行中"));
+    assert.ok(nodes.get("experimentalBaselines").textContent.includes("六轴 J1–J6: 已冻结"));
+    assert.ok(nodes.get("experimentalBaselines").textContent.includes("夹爪: 启动时未就绪 本次阻尼为 0"));
+    assert.equal(nodes.get("baselineAdmissionRows").children[3].hidden,true,"Ready arm was shown as awaiting baseline");
+    assert.equal(nodes.get("baselineAdmissionRows").children[6].hidden,false);
+    assert.equal(text("baselineAdmissionRows",6,5),"-6.59 / 2.00");
+    const row=nodes.get("baselineAdmissionRows").children[6];
+    run('lang="en";translate()');
+    assert.ok(nodes.get("experimentalBaselines").textContent.includes("Arm J1–J6: Frozen"));
+    assert.ok(nodes.get("experimentalBaselines").textContent.includes("Gripper: Unready at startup"));
+    assert.ok(nodes.get("experimentalReason").textContent.includes("gripper damping remains zero this session"));
+    assert.equal(nodes.get("baselineAdmissionRows").children[6],row,"Language switch rebuilt diagnostic rows");
+    assert.equal(requests.length,0,"Group status sent a hardware command");
   }else if(scenario==="tracking"){
     assert.equal(nodes.get("followRows").children.length,6);
     assert.equal(text("followRows",0,1),"—");
@@ -293,3 +320,6 @@ class FollowDiagnosticsTests(unittest.TestCase):
 
     def test_baseline_gate_shows_only_complete_blocking_axes_with_signed_errors_and_correct_units(self):
         self.run_scenario("baseline_admission")
+
+    def test_partial_baseline_reports_ready_arm_and_unavailable_gripper_in_both_languages(self):
+        self.run_scenario("partial_baseline")
