@@ -1,5 +1,5 @@
 {
-  "version": "0.6.29",
+  "version": "0.6.30",
   "format": "source",
   "hardware_validated": false,
   "files": [
@@ -9,7 +9,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "1080829ff259ac2905e84fbb7191f06104c8d83f128265f18c376109b417c7d5"
+      "sha256": "8d8bdc70aaec84088f1eab24b4739ad7c3f22da7d3db6674d1ae1a478dff62f5"
     },
     {
       "path": "README_STANDALONE.md",
@@ -17,7 +17,7 @@
     },
     {
       "path": "VALIDATION.md",
-      "sha256": "89103ad1dc791fa3d888a62a69c2aca30b3df4939cbf4c01a40d84ef8f320137"
+      "sha256": "e9b9b7315cc13c2239ceb8352806605557c6f29f816aa23dc7391e6de1953c2d"
     },
     {
       "path": "configs/example.json",
@@ -33,11 +33,11 @@
     },
     {
       "path": "docs/feedback.md",
-      "sha256": "0360f640dfb398dcab664c469ccfc1ef306f1226837d1165c1d73f42eced95f7"
+      "sha256": "6a1a0f2c81bff0b457c4986bb116f5ae61c982f63e9cc4fb14b19c3ad27de0bd"
     },
     {
       "path": "docs/feedback.zh.md",
-      "sha256": "4646b256edc55c9ead7161dd9f376cd4a98cc982b4db56c609328a30d6a32a89"
+      "sha256": "ed94c2e7d373f1fab2a9e1440633f15309544f2e111abd743563ca97588d7237"
     },
     {
       "path": "docs/hardware.md",
@@ -57,7 +57,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "47d8d944902c034417040ce5b1df84ccca660a93b493b0ad766e6c0c3fa6f6fa"
+      "sha256": "57105602e1247934278b95306c2313ca0e964bcc689a16a4b0b02508ae58dad4"
     },
     {
       "path": "scripts/install_lerobot_ubuntu.sh",
@@ -109,11 +109,11 @@
     },
     {
       "path": "src/stararm_lumos_feedback/__init__.py",
-      "sha256": "0f56046ee2c63963390bd02c963a236ef03e29430666d76692cd9aa3bfd41daa"
+      "sha256": "60ad22d803adc05095f8486ad7d53f81cfe22a18c2e3c713cf2510b633246b7b"
     },
     {
       "path": "src/stararm_lumos_feedback/baseline.py",
-      "sha256": "d3469cde5372c439cb83dc4a455981e82432caa342588d697e84347266e0a68b"
+      "sha256": "7f38c170895b9b3d776b660298deaec0225b43dffd50e6cc7036c46dfb7aaa73"
     },
     {
       "path": "src/stararm_lumos_feedback/button_board.py",
@@ -129,7 +129,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/config.py",
-      "sha256": "5400b8013ff8e478a99519120213d5c381b185af8666d0715a2ac02cd90d1c52"
+      "sha256": "101f354c1312e455b9835b796ed870488af804fba475bd64381b1b09e417f004"
     },
     {
       "path": "src/stararm_lumos_feedback/connection.py",
@@ -145,7 +145,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/experimental.py",
-      "sha256": "1864b83b49153c884f98bf85432a419a650bf510ace96a749212d577c9824a81"
+      "sha256": "6f8d770856a7d4514cde19f298fe3bdd480259971b462dd6e1055a146340a249"
     },
     {
       "path": "src/stararm_lumos_feedback/gripper.py",
@@ -193,7 +193,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/web/app.js",
-      "sha256": "a93253a05d08f2313d9aaa4b7c4b76a271fe94f49f6f6ca4f6ea6c05c68ab9d4"
+      "sha256": "7d2a9f0937fbccf2d233a02576d221ed13f4033400a8bc2d20218d235f9f7c61"
     },
     {
       "path": "src/stararm_lumos_feedback/web/icons/LICENSE.txt",
@@ -237,7 +237,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/web/index.html",
-      "sha256": "022c15a6d8b4b6537c4f7de50099210736917f0de270d6af11e9c670c53cb643"
+      "sha256": "4c07abee08ef4a38f307c6287921645912f66e97680556fcc77773623e67e419"
     },
     {
       "path": "src/stararm_lumos_feedback/web/models/lumos-touch-v3/NOTICE.txt",
@@ -321,7 +321,7 @@
     },
     {
       "path": "tests/test_dashboard_follow_diagnostics.py",
-      "sha256": "af1cffb3dee7f79a01a09bcb524129a5fe915a60c4ce4461107730e5c6833fa0"
+      "sha256": "32ec07ce710e2343dabe05efd1617f8e3bba4b6faa45f55e951ce0b46dfcc229"
     },
     {
       "path": "tests/test_dashboard_model.py",
@@ -341,7 +341,7 @@
     },
     {
       "path": "tests/test_experimental_session.py",
-      "sha256": "251421c242d3ec3f5bd357d4e6e6dd018261106120d3f7185ae97a61f4217b17"
+      "sha256": "238af28ea9325c192c2ab02f3c75f2f683dcaf51a27a83a6cc7442e36db0308f"
     },
     {
       "path": "tests/test_experimental_transport.py",
@@ -470,6 +470,10 @@
     {
       "path": "tests/test_lerobot_integration.py",
       "sha256": "71f44ecf32ef7dbd1c9612669af91725a21c2a8f7036053c9469168baf39d3f1"
+    },
+    {
+      "path": "tests/test_local_residual_reference.py",
+      "sha256": "8e4c836c9c132fcf117ff2f74540b94452d4e04164d42692fe02a10c707a10eb"
     },
     {
       "path": "tests/test_sdk_constructor_gil_patch.py",
