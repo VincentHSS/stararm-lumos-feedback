@@ -22,6 +22,8 @@ class InspectionConnection:
         self.motion_blocked = False
         self.error_code = self.error_interface = self.error_detail = None
         self.error_diagnostics = None
+        self._baseline_recapture_status = dict(state="idle", reason="not_requested")
+        self._can_recapture_baseline = False
         self.button_board = ButtonBoard(profile, button_settings)
         self.publish("connection_idle", clear=True)
 
@@ -57,7 +59,11 @@ class InspectionConnection:
                 blocked.update({mode: "sdk_motor_range_mismatch" for mode in motion_modes})
             if self.motion_blocked:
                 blocked.update({mode: "sdk_cleanup_failed" for mode in motion_modes})
-            return dict(
+            recapture_active = (
+                running and self.state == "active" and self.mode == "experiment"
+                and not self.closed and not self.cancel.is_set()
+            )
+            result = dict(
                 state=self.state,
                 mode=self.mode,
                 startup_pose=self.startup_pose,
@@ -72,8 +78,35 @@ class InspectionConnection:
                 error_diagnostics=self.error_diagnostics,
                 can_start=not running and not self.closed,
                 can_stop=running and self.state != "stopping",
+                can_recapture_baseline=bool(recapture_active and self._can_recapture_baseline),
+                baseline_recapture=dict(self._baseline_recapture_status),
                 button_board=dict(**self.button_board.get(), can_change=self._can_change_button()),
             )
+        # Session readiness is published as primitives. Even a caller holding
+        # an outer connection RLock never acquires a Session/transport lock.
+        return result
+
+    def request_baseline_recapture(self):
+        from .runtime import BaselineRecaptureError
+
+        with self.lock:
+            if (
+                self.closed or self.cancel.is_set() or self.state != "active" or self.mode != "experiment"
+                or self.worker is None or not self.worker.is_alive() or self.observer is None
+                or not callable(getattr(self.observer, "request_baseline_recapture", None))
+            ):
+                raise BaselineRecaptureError("active_experiment_required")
+            session = self.observer
+        queued = session.request_baseline_recapture()
+        with self.lock:
+            if (
+                self.closed or self.cancel.is_set() or self.state != "active" or self.mode != "experiment"
+                or self.observer is not session or self.worker is None or not self.worker.is_alive()
+            ):
+                raise BaselineRecaptureError("active_experiment_required")
+            self._baseline_recapture_status = dict(queued)
+            self._can_recapture_baseline = False
+        return self.status()
 
     def _can_change_button(self):
         return (
@@ -87,7 +120,7 @@ class InspectionConnection:
             if not self._can_change_button():
                 raise RuntimeError("Stop the hardware session completely before changing the button board setting")
             self.button_board.set(enabled)
-            return self.status()
+        return self.status()
 
     def available_modes(self):
         if self.motion_blocked or native_motor_range_mismatches(self.profile):
@@ -126,22 +159,24 @@ class InspectionConnection:
                     self.cancel.set()
                     self.state = "stopping"
                     self.publish("inspection_stopping" if self.mode == "inspect" else "stopped")
-                return self.status()
-            if self.worker is not None and self.worker.is_alive():
-                raise RuntimeError("A hardware session is already running; stop it before switching modes")
-            self.cancel = threading.Event()
-            self.mode = mode
-            self.startup_pose = startup_pose
-            self.error, self.state = None, "starting"
-            self.error_code = self.error_interface = self.error_detail = None
-            self.error_diagnostics = None
-            self.button_board.record(None)
-            self.publish("inspection_waiting" if mode == "inspect" else "starting", clear=True)
-            # Native motion/cleanup cannot be interrupted safely. A pending
-            # motion owner must survive main-thread shutdown until it returns.
-            self.worker = threading.Thread(target=self._run, name="lumos-web-session", daemon=mode == "inspect")
-            self.worker.start()
-            return self.status()
+            else:
+                if self.worker is not None and self.worker.is_alive():
+                    raise RuntimeError("A hardware session is already running; stop it before switching modes")
+                self.cancel = threading.Event()
+                self.mode = mode
+                self.startup_pose = startup_pose
+                self.error, self.state = None, "starting"
+                self.error_code = self.error_interface = self.error_detail = None
+                self.error_diagnostics = None
+                self._baseline_recapture_status = dict(state="idle", reason="not_requested")
+                self._can_recapture_baseline = False
+                self.button_board.record(None)
+                self.publish("inspection_waiting" if mode == "inspect" else "starting", clear=True)
+                # Native motion/cleanup cannot be interrupted safely. A pending
+                # motion owner must survive main-thread shutdown until it returns.
+                self.worker = threading.Thread(target=self._run, name="lumos-web-session", daemon=mode == "inspect")
+                self.worker.start()
+        return self.status()
 
     def _run(self):
         from .inspection import Inspection
@@ -211,6 +246,10 @@ class InspectionConnection:
 
             def publish(self, **state):
                 with connection.lock:
+                    recapture = state.get("baseline_recapture")
+                    if isinstance(recapture, dict):
+                        connection._baseline_recapture_status = dict(recapture)
+                    connection._can_recapture_baseline = state.get("can_recapture_baseline") is True
                     if state.get("status") in ("active", "leader_gap"):
                         if connection.cancel.is_set():
                             state.update(status="stopped", requested_mw=[None] * 7, hold_requested=[None] * 7)

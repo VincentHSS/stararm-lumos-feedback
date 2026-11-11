@@ -1,6 +1,8 @@
-# Software validation · 0.6.30
+# Software validation · 0.6.31
 
 ## 中文
+
+0.6.31 发布前，665 项软件测试全部通过，无跳过。新增 15 项回归覆盖显式空载声明、接口鉴权、零上限及原生释放准入、排队与采集中状态变化、取消后不恢复旧参考或自动补学、基线引用替换、跟随会话与目标保留、连接状态锁顺序，以及中英文页面交互。Ruff、JavaScript 模块语法、Shell 语法和差异检查通过。重新采集仍只建立当前姿态附近的参考；这些测试不证明全空间空载分离或真机阻尼手感。
 
 0.6.30 发布前，650 项软件测试全部通过，无跳过。新增 21 项局部参考回归覆盖受力使残差绝对值下降、双向与跨零变化、单次连续窗冻结、全七轴姿态和静止门控、原始夹爪速度、模型变化余量、固定死区不可绕过、独立预热和确认、缺帧／禁止输出／离开区域后的状态清除、有限卸载尾迹、功率上限以及原绝对残差通道兼容性。另有 2 项本机契约和绑定测试、1 项双语页面显示回归。Ruff、JavaScript 模块语法、Shell 语法和差异检查通过。局部邻域仍为工程假设；这些合成测试不证明全空间空载分离或真机阻尼手感。
 
@@ -26,6 +28,8 @@ git diff --check -- . ':!tests/fixtures/sdk_0404125_pybind_constructor.cpp'
 软件测试通过不代表真机跟随、全姿态空载分离、带载响应、原生按钮仲裁或阻尼手感已验收。显示插值不会修复 CAN 缺帧。单姿态空载基线不能证明所有运动状态下均无误阻尼；剩余力矩不是准确末端力。`experiment` 仍为实验功能，`run` 需要另行审核的本机配置与授权。
 
 ## English
+
+All 665 software tests passed without skips before the 0.6.31 release. Fifteen added regressions cover explicit unloaded declarations, endpoint authentication, zero-cap and native-release admission, changes while queued or collecting, cancellation without restoring an old reference or automatic learning, baseline alias replacement, preservation of the following session and targets, connection lock ordering, and bilingual page interaction. Ruff, JavaScript module syntax, shell syntax and diff checks passed. Recapture still establishes only a reference near the current pose; these tests do not establish unloaded separation across the workspace or hardware damping feel.
 
 All 650 software tests passed without skips before the 0.6.30 release. Twenty-one local-reference regressions cover loads that reduce absolute residual, both directions and zero crossing, a single continuous reference window, seven-axis pose and stationary gates, raw gripper velocity, model-change allowances, the fixed-deadzone floor, independent warmup and confirmation, state clearing after gaps/inhibition/out-of-region conditions, finite unloading decay, caps and compatibility with the original absolute channel. Two contract/binding tests and one bilingual dashboard regression were also added. Ruff, JavaScript module syntax, shell syntax and diff checks passed. The local neighborhood remains an engineering assumption; synthetic tests do not establish unloaded separation over the whole workspace or hardware damping feel.
 

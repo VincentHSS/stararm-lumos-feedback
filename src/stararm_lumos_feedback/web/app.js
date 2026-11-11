@@ -58,7 +58,7 @@ const validStartupPose = value => ["home","current_aligned","current_relative","
 let lang = readPreference("lumos-language") === "en" ? "en" : "zh";
 Object.assign(copy.zh, {
   experiment:"跟随＋实验阻尼", startExperiment:"启动实验阻尼",
-  experimentNote:"六轴与夹爪分别检查跟随到位，七轴实测均须静止至少 2 秒。首组完成后冻结当时已就绪的基线，未就绪组本次保持零阻尼，运行中不再补采。各轴实际上升速率见下方，无自动 HOLD。单姿态基线未覆盖全部运动范围，实验状态不代表真机效果已验证。",
+  experimentNote:"六轴与夹爪分别检查跟随到位，七轴实测均须静止至少 2 秒。首组完成后冻结当时已就绪的基线，未就绪组本次保持零阻尼，运行中不自动补采。各轴实际上升速率见下方，无自动 HOLD。单姿态基线未覆盖全部运动范围，实验状态不代表真机效果已验证。",
   experimentPowerNote:"每轴有效上限为共同与该轴上限的较小值；实际请求随负载变化。默认共同／每轴上限 1200 mW，共同可调 400–1500 mW，各轴可调 0–1500 mW；每轴 0 关闭该轴阻尼。实验无自动或软件 HOLD。mW 是 Leader 请求值。",
   formalForceBlocked:"正式力反馈尚未就绪。", experimentState:"实验状态", experimentLastReport:"最后报告的实验状态（当前未更新）", experimentCeiling:"额外实验功率上限", experimentNoExtraCap:"无；采用共同／每轴上限", experimentEffectiveCaps:"各轴当前有效上限", experimentEffectiveRise:"各轴当前上升速率", experimentFrozen:"启动基线已冻结", yes:"是", no:"否",
   experiment_waiting_baseline:"等待跟随到位并静止采集空载基线", experiment_active:"实验阻尼运行中", experiment_model_invalid:"模型无效，实验输出已停止",
@@ -73,8 +73,8 @@ Object.assign(copy.zh, {
   local_reference_reason_local_reference_unavailable:"没有可用的单次连续静止窗口参考，本次不使用局部通道。", local_reference_reason_outside_reference_region:"七轴姿态超出局部参考范围，已清空局部滤波与确认状态。",
   local_reference_reason_reference_motion:"七轴或夹爪原始电机仍有运动，局部通道暂停。", local_reference_reason_warming_local_reference:"当前在参考范围内，正在预热局部滤波与确认。",
   local_reference_reason_local_reference_eligible:"局部条件已满足，逐轴按有效超量和负载确认判断。",
-  experiment_reason_arm_active_gripper_baseline_unavailable:"六轴基线已完成，夹爪本次保持零阻尼；修正夹爪跟随后，空载重新启动可重新检查。",
-  experiment_reason_gripper_active_arm_baseline_unavailable:"夹爪基线已完成，六轴本次保持零阻尼；六轴跟随到位后，空载重新启动可重新检查。",
+  experiment_reason_arm_active_gripper_baseline_unavailable:"六轴基线已完成，夹爪本次保持零阻尼；修正夹爪跟随后，可在零上限并确认空载时显式重新采集。",
+  experiment_reason_gripper_active_arm_baseline_unavailable:"夹爪基线已完成，六轴本次保持零阻尼；六轴跟随到位后，可在零上限并确认空载时显式重新采集。",
   experiment_reason_baseline_admission_missing:"基线采集条件尚未确认，阻尼请求为 0。", experiment_reason_waiting_native_unlock:"等待收到完整真实按钮释放指令。",
   experiment_reason_waiting_first_follow_command:"等待完成首组完整跟随发送，尚不采集基线。", experiment_reason_waiting_follow_target:"正在限速接近 Leader 目标，尚不采集基线。",
   experiment_reason_waiting_follower_settled:"等待从臂实测位置接近已发送目标。", experiment_reason_waiting_stable_follow_target:"Leader 目标有变化，重新等待连续静止。",
@@ -92,7 +92,7 @@ Object.assign(copy.zh, {
 });
 Object.assign(copy.en, {
   experiment:"Following + experimental damping", startExperiment:"Start experimental damping",
-  experimentNote:"Arm and gripper target arrival are checked separately; all seven measured axes must remain stationary for at least 2 seconds. When the first group qualifies, all groups ready at that time freeze. Other groups keep zero damping for this session and are never learned during output. Actual axis rise rates are shown below, with no automatic HOLD. A single pose does not cover the full motion range, and experiment status does not establish hardware performance validation.",
+  experimentNote:"Arm and gripper target arrival are checked separately; all seven measured axes must remain stationary for at least 2 seconds. When the first group qualifies, all groups ready at that time freeze. Other groups keep zero damping for this session and are never learned automatically during output. Actual axis rise rates are shown below, with no automatic HOLD. A single pose does not cover the full motion range, and experiment status does not establish hardware performance validation.",
   experimentPowerNote:"Each effective cap is the smaller of the common and axis caps; actual requests vary with load. Common/axis defaults are 1200 mW. The common cap is adjustable from 400–1500 mW and each axis from 0–1500 mW; 0 disables that axis. Experimental mode has no automatic or software HOLD. mW is a Leader request.",
   formalForceBlocked:"Formal force feedback is not ready.", experimentState:"Experiment state", experimentLastReport:"Last reported experiment state (updates stopped)", experimentCeiling:"Additional experimental power cap", experimentNoExtraCap:"None; common/axis caps apply", experimentEffectiveCaps:"Current effective axis caps", experimentEffectiveRise:"Current axis rise rates", experimentFrozen:"Startup baseline frozen", yes:"Yes", no:"No",
   experiment_waiting_baseline:"Waiting for target arrival and stationary unloaded baseline", experiment_active:"Experimental damping active", experiment_model_invalid:"Model invalid; experimental output stopped",
@@ -107,8 +107,8 @@ Object.assign(copy.en, {
   local_reference_reason_local_reference_unavailable:"No single continuous stationary-window reference is available; the local channel is unavailable for this session.", local_reference_reason_outside_reference_region:"The seven-axis pose is outside the local region; local filter and confirmation state have been cleared.",
   local_reference_reason_reference_motion:"A measured axis or the raw gripper motor is moving; the local channel is paused.", local_reference_reason_warming_local_reference:"Within the reference region; warming the local filter and confirmation.",
   local_reference_reason_local_reference_eligible:"Local conditions are met; each axis still requires effective excess and load confirmation.",
-  experiment_reason_arm_active_gripper_baseline_unavailable:"The arm baseline is ready; gripper damping remains zero this session. Correct gripper following and restart unloaded to check again.",
-  experiment_reason_gripper_active_arm_baseline_unavailable:"The gripper baseline is ready; arm damping remains zero this session. Let the arm reach its target and restart unloaded to check again.",
+  experiment_reason_arm_active_gripper_baseline_unavailable:"The arm baseline is ready; gripper damping remains zero this session. Correct gripper following, then explicitly recapture at zero caps after confirming the unloaded state.",
+  experiment_reason_gripper_active_arm_baseline_unavailable:"The gripper baseline is ready; arm damping remains zero this session. Let the arm reach its target, then explicitly recapture at zero caps after confirming the unloaded state.",
   experiment_reason_baseline_admission_missing:"Baseline admission is unconfirmed; damping requests are 0.", experiment_reason_waiting_native_unlock:"Waiting for a complete real button-release command.",
   experiment_reason_waiting_first_follow_command:"Waiting for the first complete successful following write; baseline collection has not started.", experiment_reason_waiting_follow_target:"Approaching the Leader target through rate limits; baseline collection has not started.",
   experiment_reason_waiting_follower_settled:"Waiting for measured Follower positions to approach the sent target.", experiment_reason_waiting_stable_follow_target:"The Leader target changed; restarting the stationary wait.",
@@ -284,11 +284,52 @@ Object.assign(copy.en, {
   experimentDetails:"About this experiment", connectionSettings:"Startup settings", controlEyebrow:"CONTROL", modelEyebrow:"LIVE VIEW", outputEyebrow:"DAMPING OUTPUT", followEyebrow:"FOLLOWING",
   displaySmoothing:"Smoothed pose display", previewReadOnly:"New interface · Read-only preview of the running session", powerDraft:"Unapplied changes"
 });
+Object.assign(copy.zh, {
+  baselineRecaptureTitle:"当前姿态空载基线", baselineRecaptureAction:"重新采集空载基线", baselineRecaptureSubmitting:"正在提交",
+  baselineRecaptureConfirm:"我确认 Follower 当前空载 且未接触桌面或其他物体",
+  baselineRecaptureNote:"保持跟随 不退出电机控制 不重放按钮指令。仅在你明确确认空载后重新采集，禁止在受力或接触时使用。完成后功率上限仍为 0，需你另行恢复。新基线仍只覆盖采样姿态附近，不代表全行程或真机手感已验证。",
+  baselineRecaptureReady:"确认当前空载后可重新采集 连续静止至少 2 秒",
+  baselineRecaptureCaps:"请先将七轴普通阻尼上限设为 0 并应用 再确认当前空载",
+  baselineRecaptureInactive:"仅在正在运行的实验阻尼会话中可用",
+  baselineRecaptureUnavailable:"当前条件不满足 请等待完整真实按钮释放及新鲜遥测",
+  baselineRecaptureOffline:"连接或遥测未更新 暂不可重新采集",
+  baselineRecapturePending:"重新采集请求已排队 等待控制循环核对",
+  baselineRecaptureCollecting:"正在零阻尼输出下采集 等待跟随到位并连续静止",
+  baselineRecaptureComplete:"本次空载基线已冻结 请先检查空载状态再手动恢复功率上限",
+  baselineRecaptureRejected:"本次重新采集未完成 请检查当前会话和基线状态",
+  baselineRecaptureLastReport:"最后报告 当前未更新",
+  baselineRecaptureFailed:"重新采集请求失败",
+  active_experiment_required:"需要正在运行的实验阻尼会话", sdk_history_required:"SDK 实测历史尚未就绪 暂不可重新采集",
+  native_release_required:"需要当前完整真实按钮释放状态", zero_caps_required:"需要七轴普通阻尼有效上限全部为 0",
+  recapture_pending:"重新采集请求已排队 请等待", recapture_collecting:"正在重新采集 请等待",
+  session_stopped:"会话已停止 重新采集已取消"
+});
+Object.assign(copy.en, {
+  baselineRecaptureTitle:"Unloaded baseline at the current pose", baselineRecaptureAction:"Recapture unloaded baseline", baselineRecaptureSubmitting:"Submitting",
+  baselineRecaptureConfirm:"I confirm the Follower is unloaded and has no contact with the table or other objects",
+  baselineRecaptureNote:"Following continues without disabling motors or replaying button commands. Recapture only after explicitly confirming the unloaded state, never under load or contact. Caps remain at 0 afterward and require a separate manual change. The new baseline still covers only the sampled pose neighborhood, without full-range or hardware-feel validation.",
+  baselineRecaptureReady:"Confirm the current unloaded state, then remain stationary for at least 2 seconds",
+  baselineRecaptureCaps:"Set all seven ordinary damping axis caps to 0 and apply them, then confirm the unloaded state",
+  baselineRecaptureInactive:"Available only in an active experimental-damping session",
+  baselineRecaptureUnavailable:"Conditions are not met; wait for a complete real button release and fresh telemetry",
+  baselineRecaptureOffline:"Connection or telemetry is not updating; recapture is unavailable",
+  baselineRecapturePending:"Recapture request queued; awaiting control-loop checks",
+  baselineRecaptureCollecting:"Collecting with zero damping output; waiting for target arrival and continuous stationarity",
+  baselineRecaptureComplete:"This unloaded baseline is frozen; check the unloaded state before manually restoring caps",
+  baselineRecaptureRejected:"Recapture did not complete; check the current session and baseline state",
+  baselineRecaptureLastReport:"Last report; updates stopped",
+  baselineRecaptureFailed:"Baseline recapture request failed",
+  active_experiment_required:"An active experimental-damping session is required", sdk_history_required:"SDK measurement history is not ready for recapture",
+  native_release_required:"A current complete real button-release state is required", zero_caps_required:"All seven effective ordinary damping caps must be 0",
+  recapture_pending:"A recapture request is already queued; please wait", recapture_collecting:"Recapture is in progress; please wait",
+  session_stopped:"The session stopped; recapture was cancelled"
+});
 let state = null, dirty = false, pageConnected = false;
 let modelDefinition = null, solidViewer = null, viewerFailed = false, modelFailed = false;
 let showAlignmentTarget = true;
 let stateReceivedAt = 0, freshnessTimer = null, connectionRequestPending = false;
 let connectionRequestError = null, connectionRequestNotice = "";
+let baselineRecaptureRequestPending = false, baselineRecaptureRequestError = null;
 let buttonBoardRequestPending = false, buttonBoardRequestError = null, buttonBoardRequestNotice = "";
 let selectedStartupPose = validStartupPose(readPreference("lumos-startup-pose"));
 let startupPose = selectedStartupPose, pendingStartupPose = null;
@@ -458,6 +499,7 @@ function renderExperimental() {
   setVisible(panel,Boolean(experimental||availableModes(state?.connection).includes("experiment")||state?.mode==="experiment"));
   renderBaselineAdmission();
   renderLocalReference();
+  renderBaselineRecapture();
   if(panel.hidden)return;
   const status=typeof experimental?.state==="string"?c["experiment_"+experimental.state]??experimental.state:"—";
   const frozen=typeof experimental?.baseline_frozen==="boolean"?(experimental.baseline_frozen?c.yes:c.no):"—";
@@ -509,6 +551,41 @@ function renderLocalReference() {
     const sourceText=selected?c.localReferenceLocal:source==="absolute"?c.localReferenceAbsolute:source==="none"?c.localReferenceNone:c.localReferenceUnavailable;
     return [name(i),sourceText,fmt(local.eligible===true?local.excess_nm?.[i]:null),fmt(state.requested_mw?.[i])];
   }));
+}
+function baselineRecaptureConditions() {
+  const connection=state?.connection, reported=state?.experimental?.effective_caps_mw;
+  const active=connection?.state==="active"&&connection.mode==="experiment"&&state?.mode==="experiment"&&state.status==="active";
+  const zeroCaps=Array.isArray(reported)&&reported.length===7&&reported.every(cap=>Number.isFinite(cap)&&cap===0);
+  const recapture=connection?.baseline_recapture??state?.baseline_recapture;
+  const busy=baselineRecaptureRequestPending||["pending","collecting"].includes(recapture?.state);
+  return {active,zeroCaps,recapture,busy,allowed:Boolean(active&&zeroCaps&&telemetryFresh()&&connection.can_recapture_baseline===true&&!busy&&!connectionRequestPending&&!buttonBoardRequestPending)};
+}
+function renderBaselineRecapture() {
+  const panel=$("baselineRecapturePanel"), checkbox=$("baselineRecaptureUnloaded"), button=$("recaptureBaseline");
+  if(!panel||!checkbox||!button)return;
+  const c=copy[lang], {active,zeroCaps,recapture,busy,allowed}=baselineRecaptureConditions();
+  checkbox.disabled=!allowed;
+  if(!allowed)checkbox.checked=false;
+  button.disabled=!allowed||checkbox.checked!==true;
+  $("baselineRecaptureButtonLabel").textContent=baselineRecaptureRequestPending?c.baselineRecaptureSubmitting:c.baselineRecaptureAction;
+  const statusKey={pending:"baselineRecapturePending",collecting:"baselineRecaptureCollecting",complete:"baselineRecaptureComplete",rejected:"baselineRecaptureRejected"}[recapture?.state];
+  const detail=typeof recapture?.reason==="string"?c[recapture.reason.replace(/^recapture_aborted_/,"")]:"";
+  const status=statusKey?`${c[statusKey]}${recapture?.state==="rejected"&&detail?` · ${detail}`:""}`:"";
+  $("baselineRecaptureStatus").textContent=status?(telemetryFresh()?status:`${c.baselineRecaptureLastReport} · ${status}`):"";
+  $("baselineRecaptureHelp").textContent=!pageConnected?c.baselineRecaptureOffline:!active?c.baselineRecaptureInactive:!telemetryFresh()?c.baselineRecaptureOffline:!zeroCaps?c.baselineRecaptureCaps:busy?(recapture?.state==="collecting"?c.baselineRecaptureCollecting:c.baselineRecapturePending):!allowed?c.baselineRecaptureUnavailable:c.baselineRecaptureReady;
+  $("baselineRecaptureResult").textContent=errorText(baselineRecaptureRequestError);
+}
+async function requestBaselineRecapture() {
+  const checkbox=$("baselineRecaptureUnloaded");
+  if(!baselineRecaptureConditions().allowed||checkbox?.checked!==true){renderBaselineRecapture();return;}
+  baselineRecaptureRequestPending=true;baselineRecaptureRequestError=null;checkbox.checked=false;renderBaselineRecapture();
+  try{
+    const response=await timedFetch("/api/experimental-baseline",{method:"POST",headers:{"Content-Type":"application/json","X-Feedback-Token":state.token??""},body:JSON.stringify({unloaded_confirmed:true})});
+    const value=await response.json();
+    if(!response.ok){baselineRecaptureRequestError={...value,error:value.error??copy[lang].baselineRecaptureFailed};return;}
+    state.connection=value.connection??value;
+  }catch(error){baselineRecaptureRequestError={error:error.message};}
+  finally{baselineRecaptureRequestPending=false;renderBaselineRecapture();}
 }
 function renderFollowDiagnostics() {
   if(!$("followRows"))return;
@@ -812,6 +889,8 @@ $("startFollowing")?.addEventListener("click",()=>requestConnection("start","fol
 $("startMonitoring")?.addEventListener("click",()=>requestConnection("start","monitor"));
 $("startFeedback")?.addEventListener("click",()=>requestConnection("start",feedbackStartMode(state?.connection)));
 $("disconnectHardware")?.addEventListener("click",()=>requestConnection("stop"));
+$("baselineRecaptureUnloaded")?.addEventListener("change",()=>renderBaselineRecapture());
+$("recaptureBaseline")?.addEventListener("click",()=>requestBaselineRecapture());
 $("buttonBoardEnabled")?.addEventListener("change",()=>$("buttonBoardEnabled").checked?requestButtonBoard(true):undefined);
 $("buttonBoardDisabled")?.addEventListener("change",()=>$("buttonBoardDisabled").checked?requestButtonBoard(false):undefined);
 $("language").addEventListener("click",changeLanguage);

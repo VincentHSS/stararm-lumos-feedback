@@ -4,7 +4,11 @@ StarArm 102 主臂与 Lumos 从臂的遥操作、剩余力矩阻尼和本地三�
 
 Teleoperation, torque-residual damping and a local 3D dashboard for StarArm 102 and Lumos
 
-**Version 0.6.30** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+**Version 0.6.31** · [中文启动](docs/hardware.zh.md) · [Hardware startup](docs/hardware.md) · [软件验证 / Validation](VALIDATION.md)
+
+0.6.31 增加显式“重新采集空载基线”：仅在实验会话运行、七轴有效上限全为 0、真实按钮已释放，并由用户勾选确认当前空载无接触后执行。跟随持续运行，不退出电机控制、不重放按钮、不自动恢复上限；仍按原到位与连续静止门槛冻结单姿态基线。它便于重新核对当前姿态，不能证明全行程空载分离或真机手感已验证。
+
+Version 0.6.31 adds explicit unloaded-baseline recapture during an active experimental session, requiring all seven effective caps at 0, a real button release and a new unloaded/no-contact confirmation. Following continues without disabling motors, replaying button commands or automatically restoring caps. Existing arrival and continuous-stationary gates still freeze a single-pose baseline; this supports rechecking the current pose without establishing full-range separation or hardware feel.
 
 0.6.30 增加显式启用的六轴局部空载参考通道，处理某些方向受力后残差绝对值下降而漏判的问题。通道使用冻结的有符号空载区间，仅在参考姿态附近且七轴静止时检测区间两侧的变化；与原绝对残差通道取较大请求，沿用功率和速率限制。它仍是实验功能，不代表全行程空载分离或真机手感已验证，详细条件见[力反馈说明](docs/feedback.zh.md)。
 
@@ -75,7 +79,7 @@ bash scripts/run_feedback.sh serve
 
 打开 [http://127.0.0.1:8766/](http://127.0.0.1:8766/)，明确选择模式，从只读检查和基础跟随开始。模板保留待填写字段，不能直接用于真机。不要复制其他机械臂的标定或参数；修改源码、模型、SDK、映射或策略后，保留原校准并正常重新生成绑定，不手改哈希绕过检查。
 
-网页只允许调整普通功率上限：共同 400–1500 mW，每轴 0–1500 mW，0 关闭该轴；有效上限取共同与该轴上限的较小值，实际请求随负载变化。死区、运动余量、满输出标尺和响应策略不能从网页修改。实验模式的额外上限和授权仍由本机配置决定。
+网页只允许调整普通功率上限：共同 400–1500 mW，每轴 0–1500 mW，0 关闭该轴；有效上限取共同与该轴上限的较小值，实际请求随负载变化。死区、运动余量、满输出标尺和响应策略不能从网页修改。实验模式的额外上限和授权仍由本机配置决定。实验会话另可在七轴有效上限为 0、真实按钮已释放时，明确声明当前空载无接触后请求重新采集基线；完成后不会自动恢复上限。
 
 文档：[反馈配置](docs/feedback.zh.md) · [硬件启动](docs/hardware.zh.md) · [SDK 审核](docs/sdk-startup-review.md) · [第三方来源](docs/THIRD_PARTY.md)
 
@@ -111,7 +115,7 @@ Use Linux x86-64 and an activated Python 3.12 environment. The installation comm
 
 Prepare valid paired calibration, verified limits and a local session. Generate and complete the hardware template, then run `prepare`, offline `check` and normal `bind` as shown above. Start `bash scripts/run_feedback.sh serve` and open [http://127.0.0.1:8766/](http://127.0.0.1:8766/); explicitly select a mode, starting with inspection and basic following. Templates contain deliberately unfilled fields and cannot drive hardware as distributed. Preserve calibration and regenerate the binding after source, model, SDK, mapping or policy changes. Never edit hashes to bypass verification.
 
-The page edits only ordinary common/per-axis caps: common 400–1500 mW, each axis 0–1500 mW, with zero disabling that axis. The effective cap is the smaller of the common and axis caps; requests vary with load. Deadzones, motion allowances, full-output scales and response policies cannot be changed through the page. Local authorization and additional experimental ceilings still apply.
+The page edits only ordinary common/per-axis caps: common 400–1500 mW, each axis 0–1500 mW, with zero disabling that axis. The effective cap is the smaller of the common and axis caps; requests vary with load. Deadzones, motion allowances, full-output scales and response policies cannot be changed through the page. Local authorization and additional experimental ceilings still apply. An active experiment also offers explicit unloaded-baseline recapture when all seven effective caps are 0 and the real button is released; it requires a new unloaded/no-contact confirmation and never restores caps automatically.
 
 Documentation: [Feedback configuration](docs/feedback.md) · [Hardware startup](docs/hardware.md) · [SDK review](docs/sdk-startup-review.md) · [Third-party sources](docs/THIRD_PARTY.md)
 
@@ -128,6 +132,6 @@ Documentation: [Feedback configuration](docs/feedback.md) · [Hardware startup](
 | `tests/` | Device-free regression tests / 无设备回归测试 |
 | `tools/` | Model checks, SDK compatibility and source export / 模型检查、SDK 兼容与源码导出 |
 
-626 software tests passed for 0.6.29. Software results do not establish physical tracking or force-feedback acceptance. See [VALIDATION.md](VALIDATION.md).
+Software checks and their scope are recorded in [VALIDATION.md](VALIDATION.md). Software results do not establish physical tracking or force-feedback acceptance.
 
-0.6.29 已通过 626 项软件测试；这不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。
+软件检查及其覆盖范围见 [VALIDATION.md](VALIDATION.md)，不代表真机跟随或力反馈效果已验收。第三方来源与许可沿用各自声明，本仓库不为模型或全部资产新增统一授权。

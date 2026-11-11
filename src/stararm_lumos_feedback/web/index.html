@@ -75,6 +75,17 @@
           <div class="scroll"><table><thead><tr id="baselineAdmissionColumns"></tr></thead><tbody id="baselineAdmissionRows"></tbody></table></div>
           <p class="baseline-admission-note" data-i18n="baselineAdmissionNote"></p>
         </div>
+        <div id="baselineRecapturePanel" class="baseline-admission" aria-labelledby="baselineRecaptureTitle">
+          <p id="baselineRecaptureTitle" class="baseline-admission-title" data-i18n="baselineRecaptureTitle"></p>
+          <p id="baselineRecaptureStatus" role="status" aria-live="polite"></p>
+          <div class="button-board-options">
+            <label><input id="baselineRecaptureUnloaded" type="checkbox" aria-describedby="baselineRecaptureNote baselineRecaptureHelp" disabled><span data-i18n="baselineRecaptureConfirm"></span></label>
+            <button id="recaptureBaseline" class="quiet-button" type="button" aria-describedby="baselineRecaptureHelp" disabled><img src="/assets/icons/reset.svg" width="14" height="14" alt="" aria-hidden="true"><span id="baselineRecaptureButtonLabel" data-i18n="baselineRecaptureAction"></span></button>
+          </div>
+          <p id="baselineRecaptureHelp" class="baseline-admission-note"></p>
+          <p id="baselineRecaptureNote" class="baseline-admission-note" data-i18n="baselineRecaptureNote"></p>
+          <p id="baselineRecaptureResult" role="alert"></p>
+        </div>
         <details class="experimental-details"><summary data-i18n="experimentDetails">实验说明</summary><p data-i18n="experimentNote"></p></details>
       </div>
       <p id="connectionResult" role="alert"></p>

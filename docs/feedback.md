@@ -1,4 +1,4 @@
-# StarArm → Lumos force feedback · 0.6.29
+# StarArm → Lumos force feedback · 0.6.31
 
 Version 0.6.26 adds seven-axis baseline admission diagnostics, including normalized gripper opening. The dashboard shows each blocking axis's target, sent and measured values with errors and tolerances while waiting for the first baseline. Stopped, stale or frozen-baseline sessions do not show this as a live blocker. This is diagnostic only; thresholds, admission ordering and damping policy are unchanged.
 
@@ -40,6 +40,29 @@ safety rating.
 
 Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
+When the current pose is truly unloaded and has no external contact, use the dashboard's
+**Recapture unloaded baseline** action without exiting motor control or restarting
+following. First set all seven ordinary damping axis caps to 0 and apply them. Wait
+for the active experimental session to receive a complete real button release,
+then check the explicit unloaded/no-contact declaration and submit. The server
+rechecks the running mode, effective caps, native release state and request fields;
+the only accepted body for `POST /api/experimental-baseline` is
+`{"unloaded_confirmed": true}`. The control loop checks conditions again before
+clearing baseline collection and local-reference state, then collects under the
+existing target-arrival and at-least-two-second continuous stationary gates. The
+dashboard reports queued, collecting, frozen or rejected states.
+
+Each recapture requires a new explicit unloaded declaration. Changes in pose,
+motion, button state or contact never trigger automatic learning. Following
+continues without disabling motors or replaying button commands; communication
+and other protections can still stop the session normally. Damping stays zero
+during collection, and caps remain at 0 afterward with no automatic restoration.
+Check the unloaded state before separately restoring the desired caps. Never
+recapture with an object in the gripper, an external load or contact with a table:
+that would classify the real load as baseline error. The replacement remains a
+single-pose reference, without full-range unloaded separation or hardware-feel
+validation.
+
 The optional engineering setting
 `commissioning.experimental_damping.local_reference_enabled` defaults to
 `false` and requires confirmed assembly mass coverage. It adds a local,
@@ -67,12 +90,14 @@ unloaded coverage throughout that neighborhood. The model-torque allowance
 reduces, but cannot establish the absence of, local model error. Leaving this
 scope clears the local filter and confirmation state immediately; the original
 absolute-residual channel continues under its existing guards. The frozen
-reference is never extended or relearned while output is active. The dashboard
+reference is never automatically extended or relearned while output is active;
+only the explicit zero-cap, declared-unloaded recapture above replaces it. The dashboard
 reports whether the optional channel is enabled, currently eligible, or outside
 its local conditions, and which arm axes currently use it. This addresses one
 source of missed loads near a sampled pose; it is not a full-range force-feedback
 validation or a claim of verified hardware feel. Changing this option or policy
-requires a normal new binding. Web controls remain limited to power caps.
+requires a normal new binding. Web controls remain limited to power caps and explicit unloaded-baseline recapture;
+internal policy parameters remain read only.
 
 For the original absolute-residual channel, a sustained static load on J4 alone
 produces its corresponding damping once that axis's filtered residual magnitude
@@ -97,7 +122,8 @@ and cannot use formal `run`; an assembly declaration does not establish dynamic
 validation. The stationary baseline does not cover every pose or moving condition;
 residuals include friction/model error and are not accurate
 external-force measurements or formal force-feedback acceptance. Web controls
-remain limited to common/per-axis power caps.
+remain limited to common/per-axis power caps and explicit unloaded-baseline recapture;
+internal policy stays read only.
 
 
 **English** / [简体中文](feedback.zh.md)

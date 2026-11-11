@@ -45,6 +45,14 @@ class NativeButtonForceUnavailable(RuntimeError):
     code = "native_button_force_unreviewed"
 
 
+class BaselineRecaptureError(RuntimeError):
+    """A deliberate unloaded capture failed its current-session admission."""
+
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
 def validate_socketcan(interface, bitrate):
     try:
         result = subprocess.run(
@@ -248,6 +256,110 @@ class Session:
         # only a full send_action return recorded by this session.
         self._baseline_completed_send = None
         self._baseline_admission_diagnostics = None
+        self._baseline_recapture_lock = threading.Lock()
+        self._baseline_recapture_pending = threading.Event()
+        self._baseline_recapture_state = dict(state="idle", reason="not_requested")
+
+    def baseline_recapture_status(self):
+        with self._baseline_recapture_lock:
+            return dict(self._baseline_recapture_state)
+
+    def _baseline_recapture_rejection(self):
+        """Check cached session/native state; never read serial in HTTP threads."""
+        if self.mode != "experiment" or self.stop.is_set() or self.error is not None:
+            return "active_experiment_required"
+        if not self._sdk_history_ready or self.transport is None or self.reader is None:
+            return "sdk_history_required"
+        if getattr(self.transport, "fault", None):
+            return "sdk_history_required"
+        with self.transport.lock:
+            button = getattr(self.transport, "command_button", None)
+            if (
+                button is None or button.verified is not True or button.locked is not False
+                or button.pending or self.reader.manual_hold
+                or getattr(self.transport, "native_output_unknown", False)
+            ):
+                return "native_release_required"
+        return None
+
+    def can_recapture_baseline(self):
+        with self._baseline_recapture_lock:
+            if self._baseline_recapture_state["state"] in ("pending", "collecting"):
+                return False
+            if self._baseline_recapture_rejection() is not None:
+                return False
+            with self.caps.lock:
+                return all(min(self.caps.common, cap) == 0 for cap in self.caps.axes)
+
+    def request_baseline_recapture(self):
+        """Queue one explicit unloaded capture; only step() resets the controller."""
+        with self._baseline_recapture_lock:
+            state = self._baseline_recapture_state["state"]
+            if state in ("pending", "collecting"):
+                raise BaselineRecaptureError("recapture_" + state)
+            reason = self._baseline_recapture_rejection()
+            if reason is not None:
+                raise BaselineRecaptureError(reason)
+            with self.caps.lock:
+                if any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
+                    raise BaselineRecaptureError("zero_caps_required")
+                self._baseline_recapture_state = dict(state="pending", reason="recapture_queued")
+                self._baseline_recapture_pending.set()
+            return dict(self._baseline_recapture_state)
+
+    def _abort_baseline_recapture_locked(self, reason):
+        self._baseline_recapture_pending.clear()
+        self.controller.abort_unloaded_baseline(reason)
+        self.baseline = self.controller.baseline
+        self._baseline_admission_diagnostics = None
+        self._status_cache = {}
+        self._last_status_at = None
+        self._baseline_recapture_state = dict(state="rejected", reason=reason)
+
+    def _process_baseline_recapture(self):
+        """Revalidate the queued contract on the control thread before update."""
+        if self.baseline_recapture_status()["state"] not in ("pending", "collecting"):
+            return
+        # RX is allowed only here. Do not hold the recapture lock across this
+        # call: native status publication may acquire the connection lock.
+        if self.transport is not None and self.reader is not None:
+            self.transport.observe_native_state()
+            self.reader._command_button_state()
+        with self._baseline_recapture_lock:
+            if self._baseline_recapture_state["state"] not in ("pending", "collecting"):
+                return
+            reason = self._baseline_recapture_rejection()
+            with self.caps.lock:
+                if reason is None and any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
+                    reason = "zero_caps_required"
+                if reason is not None:
+                    self._abort_baseline_recapture_locked("recapture_aborted_" + reason)
+                    return
+                if self._baseline_recapture_pending.is_set():
+                    self.controller.reset_unloaded_baseline()
+                    self.baseline = self.controller.baseline
+                    self._baseline_admission_diagnostics = None
+                    self._status_cache = {}
+                    self._last_status_at = None
+                    self._baseline_recapture_pending.clear()
+                    self._baseline_recapture_state = dict(
+                        state="collecting", reason="collecting_declared_unloaded_baseline",
+                    )
+
+    def _finish_baseline_recapture(self):
+        with self._baseline_recapture_lock:
+            if self._baseline_recapture_state["state"] != "collecting":
+                return
+            reason = self._baseline_recapture_rejection()
+            with self.caps.lock:
+                if reason is None and any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
+                    reason = "zero_caps_required"
+                if reason is not None:
+                    self._abort_baseline_recapture_locked("recapture_aborted_" + reason)
+                elif self.controller._baseline_collection_closed:
+                    self._baseline_recapture_state = dict(
+                        state="complete", reason="baseline_recapture_complete",
+                    )
 
     @property
     def automatic_hold_accepted(self):
@@ -467,6 +579,8 @@ class Session:
         if self.mode == "experiment":
             telemetry["experimental"] = self.experimental_state()
             telemetry["baseline_admission"] = self._baseline_admission_diagnostics
+            telemetry["baseline_recapture"] = self.baseline_recapture_status()
+            telemetry["can_recapture_baseline"] = self.can_recapture_baseline()
             native_waiting = telemetry["experimental"]["state"] == "waiting_native_unlock"
             unknown = bool(getattr(self.transport, "native_output_unknown", False))
             telemetry["leader_controlled"] = not native_waiting and not unknown
@@ -779,10 +893,12 @@ class Session:
         if self.target is None:
             self.target = [s.q for s in samples]
         if self.mode == "experiment":
+            self._process_baseline_recapture()
             self.controller.update(
                 samples, self.target, self.desired,
                 baseline_admission=self.initial_baseline_admission(samples),
             )
+            self._finish_baseline_recapture()
         elif self.mode != "follow":
             if self.controller.update(samples, self.target, self.desired):
                 self.baseline.update(samples, self.controller.telemetry["residual_nm"])
@@ -1023,6 +1139,10 @@ class Session:
         finally:
             self._sdk_history_ready = False
             self.stop.set()
+            if self.mode == "experiment":
+                with self._baseline_recapture_lock:
+                    if self._baseline_recapture_state["state"] in ("pending", "collecting"):
+                        self._abort_baseline_recapture_locked("recapture_aborted_session_stopped")
             if self.watchdog is not None:
                 self.watchdog.join(timeout=0.2)
             failures = self.transport.release() if self.transport else []

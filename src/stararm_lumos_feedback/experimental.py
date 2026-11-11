@@ -108,6 +108,49 @@ class ExperimentalDampingController(Controller):
             for name, indices in BASELINE_GROUPS.items() for _ in indices
         ]
 
+    def reset_unloaded_baseline(self):
+        """Begin an explicitly requested unloaded capture on the control thread.
+
+        The runtime owns authorization and the zero-cap lock. This method never
+        acquires Caps, sends a command, or changes follow targets/model data.
+        """
+        self.baseline = BaselineEstimator(self.profile)
+        self._baselines = {"arm": self.baseline, "gripper": BaselineEstimator(self.profile)}
+        self._frozen_baselines = {}
+        self._closed_baselines = {}
+        self._baseline_collection_closed = False
+        self._baseline_floor = [None] * 7
+        self._baseline_target_anchors = {name: None for name in BASELINE_GROUPS}
+        self._baseline_reasons = {name: "warming_up" for name in BASELINE_GROUPS}
+        self.previous = self._last_seen = None
+        self.velocity_bounds = [None] * 6
+        self.filtered = [0.0] * 7
+        self.acceleration = [0.0] * 7
+        self._acceleration_initialized = False
+        self._warmup_s = 0.0
+        self.power = [0.0] * 7
+        self.confirm = [0.0] * 7
+        self.release = [0.0] * 7
+        self.active = [False] * 7
+        self.stall = [0.0] * 7
+        self.last_error = None
+        self.hold = False
+        self.hold_release = 0.0
+        self._local_reference = None
+        self._reset_local("waiting_arm_baseline" if self.local_reference_enabled else "disabled")
+        self._state, self._reason = "waiting_baseline", "warming_up"
+        # Do not call snapshot here: the runtime may hold the non-reentrant
+        # Caps lock while atomically checking zero caps and resetting state.
+        self.telemetry = dict(requested_mw=[0.0] * 7, automatic_hold=False, model_valid=False)
+
+    def abort_unloaded_baseline(self, reason):
+        """Close a cancelled explicit capture without restoring stale data."""
+        self.reset_unloaded_baseline()
+        self._baseline_collection_closed = True
+        self._baseline_reasons = {name: str(reason) for name in BASELINE_GROUPS}
+        self._reset_local(str(reason) if self.local_reference_enabled else "disabled")
+        self._state, self._reason = "model_invalid", str(reason)
+
     def _group_baseline(self, name):
         frozen = self._frozen_baselines.get(name)
         closed = self._closed_baselines.get(name)
@@ -308,6 +351,8 @@ class ExperimentalDampingController(Controller):
                 self._baseline_target_anchors[name] = None
 
     def _output_state(self):
+        if not self._frozen_baselines:
+            return "model_invalid", self._reason
         if len(self._frozen_baselines) == len(BASELINE_GROUPS):
             return "active", (
                 "mass_confirmed_experimental_damping" if getattr(self.profile, "mass_confirmed", False)
