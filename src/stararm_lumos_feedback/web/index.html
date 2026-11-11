@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb"><title>StarArm · Lumos</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+  <script type="module" src="/assets/viewer.js"></script>
+</head>
+<body>
+  <!-- UI icons adapted from Lucide, ISC License
+  Copyright (c) 2022, Lucide Contributors
+  Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted,
+  provided that the above copyright notice and this permission notice appear in all copies.
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING
+  ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL,
+  DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+  OR PERFORMANCE OF THIS SOFTWARE. -->
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20h14M8 20v-5l4-4M12 11l-4-4 3-4 7 5-2 4M16 12l3 3-2 2-3-3"/><circle cx="8" cy="15" r="2"/><circle cx="12" cy="11" r="2"/></svg></div><div><span class="eyebrow">LUMOS WORKSPACE</span><h1>StarArm <span>·</span> Lumos</h1></div></div>
+    <div class="topbar-actions"><p id="status" role="status"></p><button id="language" class="quiet-button" type="button">English</button></div>
+  </header>
+  <p id="previewNotice" class="preview-notice" role="status" hidden></p>
+  <p id="runtimeError" class="runtime-error" role="alert"></p>
+  <main class="workbench">
+    <section id="connectionPanel" class="panel wide connection-card" aria-labelledby="connectionTitle" hidden>
+      <div class="connection-heading"><div class="section-icon control-icon" aria-hidden="true"></div><div><span class="section-number"><span data-i18n="controlEyebrow">控制台</span><span id="softwareVersion" class="version-badge"></span></span><h2 id="connectionTitle" data-i18n="connectionTitle"></h2><p id="connectionSummary" role="status"></p></div></div>
+      <div class="connection-actions">
+        <button id="connectHardware" class="quiet-button" type="button" data-i18n="connectHardware" disabled></button>
+        <button id="startFollowing" class="primary-button" type="button" data-i18n="startFollowing" disabled></button>
+        <button id="startMonitoring" class="quiet-button" type="button" data-i18n="startMonitoring" disabled></button>
+        <button id="startFeedback" class="quiet-button" type="button" data-i18n="startFeedback" aria-describedby="feedbackBlocked" disabled></button>
+        <button id="disconnectHardware" class="quiet-button stop-button" type="button" data-i18n="disconnectHardware" aria-describedby="connectionMotionNote" disabled></button>
+      </div>
+      <details id="connectionSettingsDrawer" class="connection-settings">
+        <summary><span class="settings-label" data-i18n="connectionSettings">启动设置</span><span class="disclosure-arrow" aria-hidden="true"></span></summary>
+        <div class="connection-settings-body">
+      <div id="startupPosePanel" class="startup-pose-panel" hidden>
+        <label for="startupPose" data-i18n="startupPoseTitle"></label>
+        <select id="startupPose" aria-describedby="startupPoseNote">
+          <option value="home" data-i18n="startupHome"></option>
+          <option value="current_aligned" data-i18n="startupCurrent"></option>
+          <option value="current_relative" data-i18n="startupRelative"></option>
+          <option value="leader_target" data-i18n="startupLeaderTarget"></option>
+        </select>
+        <p id="startupPoseNote" data-i18n="startupPoseNote"></p>
+        <p id="attemptedStartupPose" hidden></p>
+      </div>
+      <fieldset id="buttonBoardPanel" class="button-board-panel" hidden>
+        <legend data-i18n="buttonBoardTitle"></legend>
+        <div class="button-board-options">
+          <label><input id="buttonBoardEnabled" type="radio" name="button-board" value="enabled" disabled><span data-i18n="buttonBoardEnabled"></span></label>
+          <label><input id="buttonBoardDisabled" type="radio" name="button-board" value="disabled" disabled><span data-i18n="buttonBoardDisabled"></span></label>
+        </div>
+        <p id="buttonBoardStatus" role="status"></p>
+        <p id="buttonBoardNote" data-i18n="buttonBoardNote"></p>
+        <p id="buttonBoardLocked" data-i18n="buttonBoardLocked" hidden></p>
+        <p id="buttonBoardResult" role="alert"></p>
+      </fieldset>
+        </div>
+      </details>
+      <p id="connectionMotionNote" class="connection-note" data-i18n="connectionMotionNote"></p>
+      <p id="connectionSwitchNote" class="connection-note" data-i18n="connectionSwitchNote" hidden></p>
+      <p id="feedbackBlocked" class="connection-blocked" role="status" hidden></p>
+      <div id="experimentalPanel" class="experimental-panel" hidden>
+        <p id="experimentalStatus" role="status"></p><p id="experimentalCaps"></p><p id="experimentalRise"></p><p id="experimentalReason"></p>
+        <div id="baselineAdmissionPanel" class="baseline-admission" hidden>
+          <p class="baseline-admission-title" data-i18n="baselineAdmissionTitle"></p>
+          <div class="scroll"><table><thead><tr id="baselineAdmissionColumns"></tr></thead><tbody id="baselineAdmissionRows"></tbody></table></div>
+          <p class="baseline-admission-note" data-i18n="baselineAdmissionNote"></p>
+        </div>
+        <details class="experimental-details"><summary data-i18n="experimentDetails">实验说明</summary><p data-i18n="experimentNote"></p></details>
+      </div>
+      <p id="connectionResult" role="alert"></p>
+    </section>
+    <section class="panel viewer-card" aria-labelledby="poseTitle">
+      <div class="panel-heading"><div class="heading-with-icon"><div class="section-icon model-icon" aria-hidden="true"></div><div><span class="section-number" data-i18n="modelEyebrow">实时三维</span><h2 id="poseTitle" data-i18n="pose"></h2></div></div><button id="resetView" class="quiet-button" type="button" data-i18n="resetView"></button></div>
+      <div class="viewer-shell"><canvas id="pose" width="900" height="600"></canvas><span id="poseSource" class="source-badge" role="status">URDF</span><p id="viewerHint" class="viewer-hint" data-i18n="viewerHint"></p><span id="displaySmoothing" class="smoothing-badge"></span></div>
+      <div id="alignmentControls" class="alignment-controls">
+        <label class="alignment-toggle"><input id="showAlignmentTarget" type="checkbox" checked disabled><span data-i18n="showAlignmentTarget"></span></label>
+        <div class="alignment-legend"><span><i class="pose-swatch current-swatch" aria-hidden="true"></i><span data-i18n="alignmentCurrentLegend"></span></span><span><i class="pose-swatch target-swatch" aria-hidden="true"></i><span data-i18n="alignmentTargetLegend"></span></span></div>
+      </div>
+      <p class="viewer-caption" data-i18n="poseNote"></p>
+      <section class="alignment-panel" aria-labelledby="alignmentTitle">
+        <h3 id="alignmentTitle" data-i18n="alignmentTitle"></h3>
+        <p id="alignmentStatus" role="status" data-i18n="alignmentLoading"></p>
+        <div id="alignmentTable" class="scroll" hidden><table><thead><tr id="alignmentColumns"></tr></thead><tbody id="alignmentRows"></tbody></table></div>
+        <p class="alignment-note" data-i18n="alignmentNote"></p>
+        <p class="alignment-note" data-i18n="leaderHomeNote"></p>
+      </section>
+    </section>
+    <section class="panel power-card" aria-labelledby="powerTitle">
+      <div class="panel-heading"><div class="heading-with-icon"><div class="section-icon output-icon" aria-hidden="true"></div><div><span class="section-number" data-i18n="outputEyebrow">阻尼输出</span><h2 id="powerTitle" data-i18n="power"></h2></div></div></div>
+      <p id="capsReadOnly" class="inline-notice" hidden></p>
+      <form id="caps">
+        <label class="common-cap"><span data-i18n="common"></span><span class="input-unit"><input id="common" type="number" min="400" max="1500" step="1" value="1200" required disabled><span>mW</span></span></label>
+        <div id="axisCaps"></div><button class="primary-button" data-i18n="apply" type="submit" disabled></button>
+      </form>
+      <p id="result" role="status"></p>
+      <details class="inline-details"><summary data-i18n="powerDetails"></summary><p id="powerNote" data-i18n="powerNote"></p></details>
+    </section>
+    <section class="panel wide follow-panel" aria-labelledby="followTitle">
+      <div class="panel-heading"><div class="heading-with-icon"><div class="section-icon follow-icon" aria-hidden="true"></div><div><span class="section-number" data-i18n="followEyebrow">跟随诊断</span><h2 id="followTitle" data-i18n="followTitle"></h2></div></div><p id="loopTiming"></p></div>
+      <div class="follow-body"><p id="followFreshness"></p><div class="scroll"><table><thead><tr id="followColumns"></tr></thead><tbody id="followRows"></tbody></table></div>
+        <p class="table-note" data-i18n="followTableNote"></p>
+        <details class="inline-details"><summary data-i18n="followRawDetails"></summary><div class="scroll"><table><thead><tr id="followRawColumns"></tr></thead><tbody id="followRawRows"></tbody></table></div></details>
+      </div>
+    </section>
+    <details class="panel wide disclosure diagnostics-panel">
+      <summary><span class="disclosure-title" data-i18n="diagnostics"></span><span class="disclosure-arrow" aria-hidden="true"></span></summary>
+      <div class="disclosure-body"><p data-i18n="description"></p><p id="modeNote"></p><p id="commissioning" class="commissioning-notice" role="status" hidden></p><p id="baseline"></p></div>
+    </details>
+    <details class="panel wide disclosure telemetry-panel">
+      <summary><h2 data-i18n="telemetry"></h2><span class="disclosure-arrow" aria-hidden="true"></span></summary>
+      <div class="disclosure-body"><div class="scroll"><table><thead id="columns"></thead><tbody id="rows"></tbody></table></div><p class="table-note" data-i18n="torqueNote"></p></div>
+    </details>
+    <details class="panel wide disclosure parameters-panel">
+      <summary><h2 data-i18n="fixed"></h2><span class="disclosure-arrow" aria-hidden="true"></span></summary>
+      <div class="disclosure-body"><p class="table-note" data-i18n="fixedNote"></p><div class="scroll"><table><thead><tr id="policyHead"></tr></thead><tbody id="policyRows"></tbody></table></div></div>
+    </details>
+  </main>
+</body>
+</html>

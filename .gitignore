@@ -1,0 +1,42 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+.config/
+calibration.json
+*.log
+outputs/
+
+work/
+.dependencies/
+
+# LeRobot integration
+*.egg-info/
+build/
+dist/
+.ruff_cache/
+datasets/
+configs/local.json
+lumos_joint_limits.json
+*.before_lumos.bak
+
+# Machine-local feedback setup, bindings and current caps (never distribute).
+*.local.json
+*.binding.json
+*.caps.json
+
+# Generated sessions, telemetry and build artifacts are local only.
+logs/
+runs/
+telemetry/
+snapshots/
+*.csv
+*.so
+*.pyd
+*.o
+*.whl
+*.tar.gz
+*.zip
+*.deb

@@ -1,0 +1,86 @@
+{
+  "repository": "https://github.com/VincentHSS/Star-Arm-102-Web-ACT",
+  "commit": "445f46f8756d9b826b17687dbdbb0c439537efcd",
+  "upstream_path": "Browser_SDK/assets/urdf/fl-v3/",
+  "display_only": true,
+  "model": "LumosTouch / FastTouchV3.SLDASM",
+  "hardware_shape_verified": false,
+  "mass_parameters_used": false,
+  "files": [
+    {
+      "path": "meshes/base_link.STL",
+      "bytes": 2316184,
+      "sha256": "46d307ee511515271a4065ab3b792b13bfa4a8416f8e5a86eefe07354af911e6",
+      "git_blob_sha": "98d3470a6fe6bd5e9f6e52a60987c10386424332",
+      "triangles": 46322
+    },
+    {
+      "path": "meshes/gripper_base.STL",
+      "bytes": 6817084,
+      "sha256": "c9db30dbdf8be27a648cd9f9dd2f2ab312208103deb0785dde985f76afca00e9",
+      "git_blob_sha": "b2511907451a5cbd1c9ad140a5707444c2108c37",
+      "triangles": 136340
+    },
+    {
+      "path": "meshes/gripper_link1.STL",
+      "bytes": 81484,
+      "sha256": "28fe89bb57944f81e98ed11a25b6c51d22387b89a481ca166acf48eba728a0bc",
+      "git_blob_sha": "9aa9d3e80f903757f5c7647246d035c07973ffd3",
+      "triangles": 1628
+    },
+    {
+      "path": "meshes/gripper_link2.STL",
+      "bytes": 88284,
+      "sha256": "150dc8302b45a792d4747f991593f126effc4e232f93e4dd184ad30ea51baefe",
+      "git_blob_sha": "14fc1c3a7c7bbebfd5c6ac0eca799d45e4f2380e",
+      "triangles": 1764
+    },
+    {
+      "path": "meshes/link1.STL",
+      "bytes": 1924484,
+      "sha256": "3a2da70ca32a76275ca2f68ee19d82e73ae9809ce1c7f1b3f143423a64ae57f7",
+      "git_blob_sha": "5a61d29b17e1dea09c3dac2e21e22cecd4ff62f8",
+      "triangles": 38488
+    },
+    {
+      "path": "meshes/link2.STL",
+      "bytes": 2217084,
+      "sha256": "bae9a1daf0961cacb9e1f2e758f9e1210f1ae4b4ec799a8da73c2636a4fc233b",
+      "git_blob_sha": "1295290725872d7d671b43094aac7942f6081e02",
+      "triangles": 44340
+    },
+    {
+      "path": "meshes/link3.STL",
+      "bytes": 6557884,
+      "sha256": "d992996403392f606a0204bcc126f0bc891dff788a03678b802d594b8cea5cdb",
+      "git_blob_sha": "e301d27620698e4a94802df6dd355dc5d3ca9f4c",
+      "triangles": 131156
+    },
+    {
+      "path": "meshes/link4.STL",
+      "bytes": 1311134,
+      "sha256": "ed12189c36429cd09ae227ed89e846e9ddd7ddb7fa45e763116f85b571afa279",
+      "git_blob_sha": "4f40699c9a45c9bbe6f78d77a05c9a7183dc2d2d",
+      "triangles": 26221
+    },
+    {
+      "path": "meshes/link5.STL",
+      "bytes": 1117334,
+      "sha256": "4a9513dc4faf2c58a23843c2534e0665d7303f4a199ee34912df95fc54cd7e13",
+      "git_blob_sha": "62a4f07bbe00b4e90040797d7e3cb0e78660b1e3",
+      "triangles": 22345
+    },
+    {
+      "path": "model.urdf",
+      "bytes": 8201,
+      "sha256": "f77fe284bf9b317e7cb0c96d9de55b3feb4c92451da43585641890918c3ba280",
+      "git_blob_sha": "8b058b8fa22b1296ac04ecc85a4079891449e8ef"
+    },
+    {
+      "path": "source.urdf",
+      "bytes": 10592,
+      "sha256": "a1d4f464d143ae17431a107fe7809fda8474e6848da0792aae1344b08e917a48",
+      "git_blob_sha": "bb6464aa2b6b7ead7ffc944cb9a193caf1387191"
+    }
+  ]
+}

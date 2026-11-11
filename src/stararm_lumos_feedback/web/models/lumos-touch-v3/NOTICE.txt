@@ -1,0 +1,35 @@
+LumosTouch V3 CAD display resources
+
+Upstream repository: https://github.com/VincentHSS/Star-Arm-102-Web-ACT
+Pinned commit: 445f46f8756d9b826b17687dbdbb0c439537efcd
+Upstream directory: Browser_SDK/assets/urdf/fl-v3/
+Model identity: LumosTouch / FastTouchV3.SLDASM
+Upstream notice:
+https://github.com/VincentHSS/Star-Arm-102-Web-ACT/blob/445f46f8756d9b826b17687dbdbb0c439537efcd/THIRD_PARTY.md
+
+Included resources: source.urdf, model.urdf and nine original STL files under
+meshes/. SOURCE.json records each original file's size, SHA-256 and Git blob ID.
+The upstream model.urdf adjusts relative mesh paths; source.urdf is retained.
+
+Relevant original upstream statements (Chinese):
+
+“URDF 资源：`Browser_SDK/assets/urdf/fl-v3/` 来自用户提供的 `URDF.zip`
+（LumosTouch / FastTouchV3.SLDASM）”
+
+“相关资产沿用各自来源授权，本工程不另行授予模型资产许可。”
+
+“模型的 URDF 更新不代表硬件兼容性或控制参数已实机确认。”
+
+“本仓库未为全部原始资产擅自添加新的统一开源许可证；公开可下载并不等于
+所有品牌和模型资产都被重新授权。”
+
+These resources retain their original source authorization. Neither the upstream
+statement nor this copy grants a new license for the CAD assets. Public download
+availability does not establish additional rights to the models or branding.
+
+Use in this project is limited to dashboard geometry. The six arm joint frames
+match the SDK V2 model, but the display resources do not replace the configured
+physical dynamics, masses/inertias, limits or calibration. The V3 gripper has not
+been confirmed as exact TypeLJ geometry. Its displayed finger separation follows
+TypeLJ opening distance; this is not verification of the housing, finger length,
+tool offset, mass coverage, hardware compatibility or control parameters.
