@@ -279,13 +279,16 @@ class NativeSessionTests(unittest.TestCase):
         session = self.session()
         self.uart.buffer.extend(commands(True, range(3)))
 
-        def advance_clock(_delay):
-            self.now += 0.3
-            return False
+        def advance_native_clock():
+            # Startup now receives before entering the active loop. Advance
+            # the parser's own clock while it waits for a genuinely missing
+            # joint, rather than depending on an active-loop stop.wait call.
+            self.now += 0.01
+            return self.now
 
         with (
             patch.object(session, "start_watchdog"),
-            patch.object(session.stop, "wait", side_effect=advance_clock),
+            patch.object(self.button, "clock", side_effect=advance_native_clock),
         ):
             with self.assertRaises(NativeButtonGap) as caught:
                 session.run(0.5)

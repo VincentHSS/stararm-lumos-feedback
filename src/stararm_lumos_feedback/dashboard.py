@@ -100,7 +100,7 @@ class Dashboard:
                     # files or path traversal can be reached through this route.
                     web = (Path(__file__).parent / "web").resolve()
                     asset = (web / self.path[len("/assets/") :]).resolve()
-                    mime = {".js": "text/javascript", ".stl": "model/stl", ".txt": "text/plain"}.get(
+                    mime = {".js": "text/javascript", ".stl": "model/stl", ".txt": "text/plain", ".svg": "image/svg+xml"}.get(
                         asset.suffix.lower()
                     )
                     if not asset.is_relative_to(web) or not asset.is_file() or mime is None:
@@ -119,6 +119,31 @@ class Dashboard:
             def do_POST(self):
                 if not self.trusted() or self.headers.get("X-Feedback-Token") != dashboard.token:
                     self.reply(403, {"error": "Invalid local origin/token"})
+                    return
+                if self.path == "/api/experimental-baseline":
+                    if dashboard.connection is None:
+                        self.reply(409, {"error": "Connection controls unavailable", "code": "connection_unavailable"})
+                        return
+                    try:
+                        size = int(self.headers.get("Content-Length", "0"))
+                        if not 0 < size <= 4096:
+                            raise ValueError("Invalid request size")
+                        self.connection.settimeout(1)
+                        value = json.loads(self.rfile.read(size))
+                        if (
+                            not isinstance(value, dict) or set(value) != {"unloaded_confirmed"}
+                            or type(value["unloaded_confirmed"]) is not bool
+                            or value["unloaded_confirmed"] is not True
+                        ):
+                            raise ValueError("An explicit boolean unloaded_confirmed=true declaration is required")
+                        self.reply(200, dashboard.connection.request_baseline_recapture())
+                    except (ValueError, TypeError, KeyError, OSError) as exc:
+                        self.reply(400, {"error": str(exc)})
+                    except RuntimeError as exc:
+                        error = {"error": str(exc)}
+                        if getattr(exc, "code", None):
+                            error["code"] = exc.code
+                        self.reply(409, error)
                     return
                 if self.path == "/api/button-board":
                     if dashboard.connection is None:

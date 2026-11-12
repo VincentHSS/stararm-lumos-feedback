@@ -11,6 +11,7 @@ from stararm_lumos_feedback.motion import CURRENT_STRATEGIES
 from . import _legacy
 from .common import JOINT_KEYS, features, limit_target, load_limits, load_mapping, vector
 from .config import LumosConfig
+from .gripper_control import TypeLJFollowControl, validate_follow_gains
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class Lumos(Robot):
         self._last_send = None
         self.last_sent_action = None
         self.last_action_diagnostics = None
+        self._gripper_follow_control = None
         # Optional session-owned cancellation guard. Basic LeRobot operation
         # leaves this unset and retains its existing behavior.
         self.before_control_write = None
@@ -40,6 +42,9 @@ class Lumos(Robot):
         self.after_sdk_startup = None
         self.measured_limit_margin_rad = (0.0,) * 6
         super().__init__(config)
+        validate_follow_gains(config.gripper_follow_kp, config.gripper_follow_kd)
+        if config.gripper_follow_kp is not None and not config.gripper:
+            raise ValueError("gripper_follow gains require gripper=true")
         for value in (
             config.max_speed_deg_per_sec,
             config.max_target_step_deg,
@@ -98,6 +103,10 @@ class Lumos(Robot):
         if not self.config.sdk_root:
             raise ValueError("sdk_root is required: pass the startouch_sdk source directory")
         sdk_root = _legacy.find_sdk_root(Path(self.config.sdk_root))
+        self._gripper_follow_control = (
+            TypeLJFollowControl.from_sdk(sdk_root, self.config.gripper_follow_kp, self.config.gripper_follow_kd)
+            if self.config.gripper_follow_kp is not None else None
+        )
         from startouchclass import SingleArm
 
         logger.warning("SingleArm construction may ENABLE MOTORS, including in preview mode")
@@ -361,7 +370,15 @@ class Lumos(Robot):
         if self.config.execute and grip is not None:
             if self.before_control_write is not None:
                 self.before_control_write()
-            if self.arm.setGripperPosition(grip) is False:
+            if self._gripper_follow_control is None:
+                accepted = self.arm.setGripperPosition(grip)
+            else:
+                distance, kp, kd = self._gripper_follow_control.command(grip)
+                accepted = self.arm.setGripperDistance(distance, kp, kd)
+                self.last_action_diagnostics["gripper_position_control"] = dict(
+                    distance_m=distance, kp=kp, kd=kd,
+                )
+            if accepted is False:
                 raise RuntimeError("SDK rejected gripper command")
         sent = dict(zip(JOINT_KEYS, target))
         if grip is not None:
@@ -388,3 +405,4 @@ class Lumos(Robot):
             self._previous_target = None
             self._last_send = None
             self.last_action_diagnostics = None
+            self._gripper_follow_control = None

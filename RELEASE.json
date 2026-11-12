@@ -1,5 +1,5 @@
 {
-  "version": "0.6.24",
+  "version": "0.6.31",
   "format": "source",
   "hardware_validated": false,
   "files": [
@@ -9,7 +9,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "54e0f8fe447ee614baa0b9341c86ce1d9c8ba995422200dbf1c1f8a343503911"
+      "sha256": "692677c484a87a086d234b258da5467f7993037a74840d4cc610896ab9c384cc"
     },
     {
       "path": "README_STANDALONE.md",
@@ -17,7 +17,7 @@
     },
     {
       "path": "VALIDATION.md",
-      "sha256": "6b4d4bf7ebcfa97c881228f119bd51660efe4171b6f18bcffa6cccd42e169bde"
+      "sha256": "0712de0b81354776eb6bb82ddc9c7208efcb2eebd3e7c3b3f965e6c8447e69f5"
     },
     {
       "path": "configs/example.json",
@@ -29,27 +29,27 @@
     },
     {
       "path": "docs/THIRD_PARTY.md",
-      "sha256": "12cd82887228465f27e791b6c0aa3e6143e9d876fa722842432bdb5bbb73dd53"
+      "sha256": "de413be56b5f1b054884363f495c0b9a0d0c84d272141c76c6c6a77ce8b02484"
     },
     {
       "path": "docs/feedback.md",
-      "sha256": "771e132eb1acf7b2aa1cef68116d2dab8fe2f6d470ed2830efa945dfca6eaf78"
+      "sha256": "d23273335e5c60d5d1651e3d7af9a9e986e791c33cff95316f997dd3bafe045e"
     },
     {
       "path": "docs/feedback.zh.md",
-      "sha256": "290602f4e8af57799a19693fe95c03342b81c532aba31d7a2330cc0dc51037a4"
+      "sha256": "564de8fd01496f374c5a414dbc6a6b98b12e389afb5e99e477edd975a292ec37"
     },
     {
       "path": "docs/hardware.md",
-      "sha256": "8543ad2e20aa282b4896c35fff7131d6aaa00a75ef92efccde26869cea58c0d9"
+      "sha256": "e968b08ccc97050e4b97ad67b5a493ad8f48e5b1f4e9405c8983345159467678"
     },
     {
       "path": "docs/hardware.zh.md",
-      "sha256": "c556a36a2e1739c1c90d25bf8afe1286e9f9332fd32886b3aa62eca80513d132"
+      "sha256": "7404658547c5c449505b8c757d69fcdd35bf43cff3eb57fdda66367312c4e848"
     },
     {
       "path": "docs/sdk-startup-review.md",
-      "sha256": "d92e0e79fa1e4bd1196e13c7b618d38f680b369f3e6e27d0ca0d135f71286b41"
+      "sha256": "378cc4cd7ef3818f1e1d34d931199981528df43333b714662b052c2b060969b0"
     },
     {
       "path": "docs/stararm102-lumos.md",
@@ -57,7 +57,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "8036a209f2cad39f7ffa2e0ac60002cd55f03062a5e168abb58bb105731ea6a4"
+      "sha256": "40515f41097c7b6536170c1aac2e90339d4e96881c2d3f8c71f4bcc985f31ff8"
     },
     {
       "path": "scripts/install_lerobot_ubuntu.sh",
@@ -65,7 +65,7 @@
     },
     {
       "path": "scripts/install_ubuntu.sh",
-      "sha256": "db0264f8cd7af7a8b55f2ec3d1056d7752da2b0757d5132464d14c8d1d28c79c"
+      "sha256": "d56c2db351a6a3b9b6a568e26e7e4d567121d93c236bbfa0140a46a0feca95d7"
     },
     {
       "path": "scripts/run_feedback.sh",
@@ -93,23 +93,27 @@
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/config.py",
-      "sha256": "3f27515c0c7e9b2f4ab5bcc2cfb27ae738f4dc77fadd01b2e353d93d5b623442"
+      "sha256": "581628475c25d9d49af809bcc1625b6af6cc3fa7e0b3012cb18cb54f180eeb26"
+    },
+    {
+      "path": "src/lerobot_robot_lumos_stararm102/gripper_control.py",
+      "sha256": "b906e5456adf433e564aa97e46fb66d763430b520fe50b34b262557ea767dcb3"
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/lumos.py",
-      "sha256": "57d0eb164637bc680bb159c6d1595cbc6b77e8b5adc9d12c901fea4c8a12ee86"
+      "sha256": "842617eb3a848b2768dd35c258e7418da32361d2f4472468d5d8233a81d7184d"
     },
     {
       "path": "src/lerobot_robot_lumos_stararm102/stararm102.py",
-      "sha256": "d58d58e090f0cd199d0688d14b880532dc1a9db2f4c37a09d8bf131da6a23d31"
+      "sha256": "251efc79a7d91e455494e6cb1641df068d002a2dffb3668d1eaac064f1682b74"
     },
     {
       "path": "src/stararm_lumos_feedback/__init__.py",
-      "sha256": "68d3e9bc4950e87e1d48b7ca58a0684e1aecc21afef8c2998b360c926947c51f"
+      "sha256": "94fda91b674de27fcdacbac70cdfe5032d4f8ed5d0e4cb04c27904c2bcf75f8e"
     },
     {
       "path": "src/stararm_lumos_feedback/baseline.py",
-      "sha256": "d3469cde5372c439cb83dc4a455981e82432caa342588d697e84347266e0a68b"
+      "sha256": "7f38c170895b9b3d776b660298deaec0225b43dffd50e6cc7036c46dfb7aaa73"
     },
     {
       "path": "src/stararm_lumos_feedback/button_board.py",
@@ -125,11 +129,11 @@
     },
     {
       "path": "src/stararm_lumos_feedback/config.py",
-      "sha256": "5400b8013ff8e478a99519120213d5c381b185af8666d0715a2ac02cd90d1c52"
+      "sha256": "101f354c1312e455b9835b796ed870488af804fba475bd64381b1b09e417f004"
     },
     {
       "path": "src/stararm_lumos_feedback/connection.py",
-      "sha256": "5be19f64749ad41d0c8598a917635811dae40f564dbb2b291a34ac112de234c5"
+      "sha256": "578f4e1766e8f46f2701e35e4b8cf649a634a8a0fcc7033c6cf7cc7343cff8f5"
     },
     {
       "path": "src/stararm_lumos_feedback/control.py",
@@ -137,11 +141,11 @@
     },
     {
       "path": "src/stararm_lumos_feedback/dashboard.py",
-      "sha256": "9ac85726e2a046888652d1839af6540aef5de25a4dc88c2b0a50a42070aae8ac"
+      "sha256": "6f5d01ced7803fb826d95a20057739e2e8c50a983a55205ffc270e8f45439e70"
     },
     {
       "path": "src/stararm_lumos_feedback/experimental.py",
-      "sha256": "234f85094944cd75c796f208a12839f35fa13e082c414341736112cd6ecee83d"
+      "sha256": "da1f9edff52d99408e6600fb53f01bf107cc63a6f2f66b6ba7d486e180d93f78"
     },
     {
       "path": "src/stararm_lumos_feedback/gripper.py",
@@ -173,7 +177,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/runtime.py",
-      "sha256": "79239df0742e8a4995e2b64794e38c3f49042860d1a06020ba7c860fa2b3ea8b"
+      "sha256": "db6416f4a60e813d1971fc7a9f3b07aa671790f2b04732382b38cf50fcc4b6ab"
     },
     {
       "path": "src/stararm_lumos_feedback/startup.py",
@@ -181,7 +185,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/transport.py",
-      "sha256": "ffbca5e02ada81818b0f0b08ddc1737dc5b2574ac555859435f5e84887d9605a"
+      "sha256": "c2dcc794f6897a99e2f42b71b11eb7bc36385c9b7e912379dfd3f16565ad9d4f"
     },
     {
       "path": "src/stararm_lumos_feedback/visualization.py",
@@ -189,11 +193,51 @@
     },
     {
       "path": "src/stararm_lumos_feedback/web/app.js",
-      "sha256": "57bb11e93735909a2791ffc5625fd908bd985722f3dbdf1f849e77c5333bc46d"
+      "sha256": "92a1256367c6ac8ac7f2d8a7c04f95cd58293071af19569d3ce7ee684992706a"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/LICENSE.txt",
+      "sha256": "ab3bfe4c712cf271b14add9623b1cc35ca5594c320529029acc2c118b11768b4"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/activity.svg",
+      "sha256": "60e867b7c3b7c1c37461af465b2992a80c2a396182515eddfdb04b2d2466c773"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/cable.svg",
+      "sha256": "4c3046b89701c2733469e9d7a590129300188bb65dc28e4821067151a558265e"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/check.svg",
+      "sha256": "3745ae228dae28585cb546f1c13c4936d645b3ffc8731228836edc01ad549e10"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/cube.svg",
+      "sha256": "b758afcbd8264890d7d03c2913c02f4a0563ef5e09e4e27de762465d04d4e45c"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/language.svg",
+      "sha256": "b1c2918f19b1b8c890db6bf799ce1ca150d889b9833b916b7dccb002ee0945dc"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/play.svg",
+      "sha256": "44b04da5859401359b4e0eea4755175ac6e0ea4a510d1bf74a80336171833a55"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/reset.svg",
+      "sha256": "d73b339f034799321dc522c8a46e8e3e3f4fa8374d5a851eafc9eb189602a6fe"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/sliders.svg",
+      "sha256": "ba69185d35cab8bb1871385ef22d579fc4d56e86a7254a917937f8391bba696c"
+    },
+    {
+      "path": "src/stararm_lumos_feedback/web/icons/square.svg",
+      "sha256": "802b705fed21b3cee479cd451c41653c4ca98c54835c0ed9baabdef9d949ebbc"
     },
     {
       "path": "src/stararm_lumos_feedback/web/index.html",
-      "sha256": "4cf7fd6257c908aec16ce17762439b081c3ffc79b6c6b3ba34d7a223267f3e4b"
+      "sha256": "6748bd49d516254809310cd7846e894b3b8207f31d3d385f6c884f1f40818845"
     },
     {
       "path": "src/stararm_lumos_feedback/web/models/lumos-touch-v3/NOTICE.txt",
@@ -249,7 +293,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/web/style.css",
-      "sha256": "941c6927d4d29f2a4f917e5143e1bca1bb3bc98a1c2e45ec69af6be7eb8d5fe8"
+      "sha256": "fb0a5ce62c961ec78c39c987da173c7bdd92f50b0850f145ce316e8afa1187a5"
     },
     {
       "path": "src/stararm_lumos_feedback/web/vendor/NOTICE.txt",
@@ -261,7 +305,7 @@
     },
     {
       "path": "src/stararm_lumos_feedback/web/viewer.js",
-      "sha256": "3abf6a1825c271ed7301f65ce46b22e60d59be88b8095b90d578628b4aa9c182"
+      "sha256": "86108eb3ab7b89d527de3a11e46a6176a970f628f08b2c6f07442bf6533895c7"
     },
     {
       "path": "tests/fixtures/sdk_0404125_pybind_constructor.cpp",
@@ -273,15 +317,15 @@
     },
     {
       "path": "tests/test_dashboard_commissioning.py",
-      "sha256": "172dcaf1659b0965b9ef1950de32910e40adb653aa7a02cb636e4c8e8cd3bef7"
+      "sha256": "3e1dae0249d1543067b207e09a31c125c9219b40fd37c3f0af638769432009a4"
     },
     {
       "path": "tests/test_dashboard_follow_diagnostics.py",
-      "sha256": "9171b949fd99c71add4853ad5370429a4065476690f840ed33da18fcebb40dd9"
+      "sha256": "32ec07ce710e2343dabe05efd1617f8e3bba4b6faa45f55e951ce0b46dfcc229"
     },
     {
       "path": "tests/test_dashboard_model.py",
-      "sha256": "859f405ab6a96743a93c7ae27e0efb96eaded4c93efe12f3e11bd9072a322eb0"
+      "sha256": "2aca3ecac153c8f09330cd2dde82a3fc636a7e749612a145e6147c1576daf18e"
     },
     {
       "path": "tests/test_dashboard_pose_retention.py",
@@ -293,11 +337,11 @@
     },
     {
       "path": "tests/test_experimental_damping.py",
-      "sha256": "f82dcdf510baaeb6d31ca0f7216b8f098f7d32fff4b821a7bac458e831363fa4"
+      "sha256": "11f2d404fa7d5b7227ab70a12c5ce2cf84352b5041c0cdec880339eedb9093f6"
     },
     {
       "path": "tests/test_experimental_session.py",
-      "sha256": "2ae6812c14d4019722c941bf6c8743cceed157ff4e0d6469070bf6e727ba35de"
+      "sha256": "238af28ea9325c192c2ab02f3c75f2f683dcaf51a27a83a6cc7442e36db0308f"
     },
     {
       "path": "tests/test_experimental_transport.py",
@@ -365,11 +409,11 @@
     },
     {
       "path": "tests/test_feedback_native_button.py",
-      "sha256": "1244904488616c9caa6de1c945cbd8555ac6c80499855adc65b5152bba9b1681"
+      "sha256": "f7a4408084ce1f94c1de68f77e82c7f3496676f4c01fb76e4dbb3a0bf9794f1b"
     },
     {
       "path": "tests/test_feedback_native_button_runtime.py",
-      "sha256": "3f52de6cbc270a4ca0065d5cb6c7cee326d32f41dcb6ee198344abe5d038cdeb"
+      "sha256": "efb7611d657ede7624d57f5e4d55cee9cb905616ca9922c75f9734f74e2c9808"
     },
     {
       "path": "tests/test_feedback_native_compat.py",
@@ -392,6 +436,14 @@
       "sha256": "ca94bddcfe91b0a176743a050ca6333c42443110efc6c5d63b38de827fa3eb7d"
     },
     {
+      "path": "tests/test_feedback_startup_rx.py",
+      "sha256": "00ebe7787ebe9dcfaa89ea2a056db8759cd9218b8f8fd81d309a65aa956e533c"
+    },
+    {
+      "path": "tests/test_feedback_startup_rx_transport.py",
+      "sha256": "cf22c8491c1b415a0cd0452f063e83f9106db101c713889c02d17672750f729d"
+    },
+    {
       "path": "tests/test_feedback_teleop_entrypoint.py",
       "sha256": "41035ba9556805eae7a35bc0c11045ba1f74c3e4005052733ad0f8bad8b7de1d"
     },
@@ -405,7 +457,11 @@
     },
     {
       "path": "tests/test_follow_control.py",
-      "sha256": "a0f04aceaa22c68ce47bc5a7758c32969d5224f9df0af936f8534b306e2a954a"
+      "sha256": "31303082b9fa9d31523ae57b3788ed05c731b52d037e45779989a1a7fec9eecb"
+    },
+    {
+      "path": "tests/test_gripper_follow_control.py",
+      "sha256": "9cd39edb4f70e9a7903b6e28cca4203b13a26a4db9227cac856852e6dc25d10f"
     },
     {
       "path": "tests/test_leader_filter_config.py",
@@ -416,6 +472,18 @@
       "sha256": "71f44ecf32ef7dbd1c9612669af91725a21c2a8f7036053c9469168baf39d3f1"
     },
     {
+      "path": "tests/test_local_residual_reference.py",
+      "sha256": "8e4c836c9c132fcf117ff2f74540b94452d4e04164d42692fe02a10c707a10eb"
+    },
+    {
+      "path": "tests/test_manual_baseline_recapture.py",
+      "sha256": "6132d901eee89f564738102966a6d2031c390e116bbd72db4078a507fe04e230"
+    },
+    {
+      "path": "tests/test_manual_baseline_recapture_ui.py",
+      "sha256": "3811e89c0e0fb78e00feb28f51038bff507c41c4772f4dea81ed6f24b3e3bb5f"
+    },
+    {
       "path": "tests/test_sdk_constructor_gil_patch.py",
       "sha256": "a6cb410327f1a6f43c3a8e46f8245be63298de313d1223312b8b8adb80757585"
     },
@@ -424,12 +492,16 @@
       "sha256": "29d060d4d24c65b3b73f90dc259dd942d1f22404a5ec7be7be790e9867b1224e"
     },
     {
+      "path": "tests/test_viewer_presentation.py",
+      "sha256": "319c16bf3a7d1a439d05cf5e8a3f210a8c8cefa51a0f3c10102da839bb2a400d"
+    },
+    {
       "path": "tools/build_sdk_motor_ranges.py",
       "sha256": "72e926acbca8ac0342e1e29b23e6cee51fafc7619bccf86c64c90c63d95b4538"
     },
     {
       "path": "tools/export_feedback_source.py",
-      "sha256": "ed599d6bf3610208c2fd124c1536d9a39d7204f1f4e18e35d7c23016a6406a4d"
+      "sha256": "f1a719ad91caaf140d107860430115d1028a3a31576c27bc1a5027731361a592"
     },
     {
       "path": "tools/export_joint_limits.py",

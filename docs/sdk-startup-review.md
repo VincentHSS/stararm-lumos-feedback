@@ -13,14 +13,16 @@ holding, following and force feedback remain unvalidated.
 Current result: the valid source correction and regenerated binding allow
 `follow/monitor` to pass the native range gate, while every other startup and
 motion guard remains. Missing/partial correction builds retain the original
-rejection. Model coverage requires separate confirmation. Formal `run` remains
-blocked pending dynamic-threshold, measured-response and native-button arbitration acceptance. The native-output
+rejection. Each installation must record its own model-coverage evidence. Passing
+this gate does not authorize formal `run`: dynamic thresholds, measured response
+and native-button arbitration require separate acceptance. The native-output
 window before Python's fixed seed remains and requires stable physical support.
 
 当前结论：有效源码修正及正常重新生成的绑定可使 `follow/monitor` 通过原生量程
 门禁，其余启动及运动保护保留。未安装或部分修正构建仍被原门禁拒绝。当前 `run`
-仍因动态阈值、实测响应及正式原生按钮力输出仲裁未验收而禁止；模型覆盖须单独确认。
-Python 首次固定目标前的原生输出窗口仍存在，必须保留稳定支撑。
+仍需单独验收动态阈值、实测响应及正式原生按钮力输出仲裁；通过本项不授权正式
+`run`。每套装配应记录自己的模型覆盖证据。Python 首次固定目标前的原生输出窗口
+仍存在，必须保留稳定支撑。
 
 Public API review found no per-axis motor-type/range selection, and the normal
 upstream build still copies a precompiled core. That finding remains valid, but
@@ -48,17 +50,23 @@ Gitee 与 GitHub main 均为 `040412542c0b6b6fd2bb6dd652c0de6c666631be`（SDK 0.
 
 ## Pinned material / 固定资料
 
+### Startup UART reception / 启动串口接收
+
+A software reproduction found that a preflight query can finish its monitor replies after receiving native commands for IDs 0–4, then enter a blocking SDK constructor before consuming ID 5. The unchanged 250 ms parser deadline then expires before queued bytes are read. This reproduces the reported error; it does not establish the arrival timing of the failed physical session. Version 0.6.29 settles pending groups before initialization and keeps RX-only reception alive through preflight and SDK construction, using the same transport lock. The receiver stops and joins before handoff. True incomplete groups still fail; SDK binaries, confirmation rules and damping policy are unchanged.
+
+软件复现发现，预检可能收齐监测回包及按钮 ID 0–4 命令后就进入阻塞的 SDK 构造，尚未读取 ID 5。原 250 ms 期限随后在读取排队字节前到期，可复现用户看到的错误，但不能据此确定失败真机会话的实际到达时间。0.6.29 在初始化前收齐在途组，预检和 SDK 构造期间使用同一传输锁持续只读接收，交接前停止并等待线程退出。真实半组仍会报错；SDK 二进制、六轴确认规则及阻尼策略不变。
+
 ### Constructor GIL correction / 构造执行锁修正
 
 The pinned pybind constructor parses Python kwargs and then calls the native
 constructor while holding the GIL. The TypeLJ native initialization includes five
-20 ms receive waits plus subsequent waits, exceeding a configured CAN age
-limit such as 100 ms on its normal quiet-wait path. A Python CAN receiver cannot run during that
+20 ms receive waits plus subsequent waits, which can exceed configured CAN
+freshness deadlines on its normal quiet-wait path. A Python CAN receiver cannot run during that
 call, so genuine early gripper responses can queue and fail freshness checks.
 This is a source/binary finding, not a measured hardware timing result.
 
 固定 SDK 的 pybind 构造器在转换完 Python 参数后仍持有 GIL。TypeLJ 初始化含五轮
-20 ms 接收等待及后续等待，常规静默等待路径可超过例如 100 ms 的已配置 CAN 时效上限。
+20 ms 接收等待及后续等待，常规静默等待路径可能超过配置的 CAN 时效上限。
 同进程 Python CAN 线程无法在此期间运行，早到的真实夹爪帧可能积压并触发过期。
 这项结论来自源码和二进制审查，并非真机构造耗时测量。
 
@@ -100,37 +108,41 @@ SDK 应放在 `.../<version>/startouch_sdk`，配置文件为
 `.../<version>/startouch_sdk/src/config/robot_kinematics.yaml`。解析后的 SDK 根目录
 仍须名为 `startouch_sdk`；用符号链接给版本目录增加别名，不能提供该实体布局。
 
-Use the final physical SDK layout before rebuilding. RPATH/RUNPATH can embed
-source/build locations; after relocation, rebuild there and regenerate the binding
-normally. Before any native constructor, resolve and check the selected SDK root
-and read `src/config/robot_kinematics.yaml` offline, as shown in the
-[hardware guide](hardware.md). Importing the extension or reading its GIL-patch
-marker alone does not test native resource discovery.
+A directory containing the YAML alone does not establish the required native
+resource layout. Copy all required SDK resources into the final physical
+`startouch_sdk` directory before rebuilding. RPATH/RUNPATH can embed source/build
+locations; after relocation, rebuild there and regenerate the binding normally.
+Before any native constructor, resolve and check the selected SDK root and read
+`src/config/robot_kinematics.yaml` offline, as shown in the
+[hardware guide](hardware.md). An extension import and the GIL-patch marker alone
+do not test native resource discovery.
 
-先把所需 SDK 资源复制到最终实体布局，再重建；RPATH/RUNPATH 可能嵌入源码或
-构建路径，搬迁后须在新位置重建并正常生成绑定。任何原生构造前，按
-[真机接入说明](hardware.zh.md)离线解析核对所选 SDK 根目录并读取 YAML。仅导入
+目录中只有 YAML 不足以证明原生资源布局正确。先把所需 SDK 资源复制到最终实体
+`startouch_sdk` 目录，再重建；RPATH/RUNPATH 可能嵌入源码或构建路径，若搬迁
+须在新位置重新构建并正常生成新绑定。任何原生构造前，按[真机接入说明](hardware.zh.md)
+离线解析核对所选 SDK 根目录，并读取 `src/config/robot_kinematics.yaml`。仅导入
 扩展和读取 GIL 补丁标记，不会验证原生资源发现。
 
-This specific missing-configuration failure occurs before native CAN initialization
-and enabling in the constructor. Read-only startup preflight may already have sent
-CAN queries. The layout finding and correction do not establish physical holding,
-following, damping or motor state from earlier sessions.
+Missing-configuration failures at this lookup occur before native CAN
+initialization and enabling in the constructor. Read-only startup preflight may
+already have sent CAN queries. Resource-layout checks do not establish physical
+holding, following, damping or the motor state left by another process.
 
-本次缺配置错误发生在构造器原生 CAN 初始化及使能之前；启动时的只读姿态预检可能
-已发送 CAN 查询。这项路径定位及修正不验证实际保持、跟随、阻尼，也不证明此前
-会话留下的电机状态。
+此资源查找阶段的缺配置错误发生在构造器原生 CAN 初始化及使能之前；启动时的只读
+姿态预检可能已发送 CAN 查询。资源布局检查不验证实际保持、跟随、阻尼，也不能
+确定其他进程留下的电机状态。
 
 ### First-seed state-cache readiness / 首次固定目标前的状态缓存就绪
 
 The Python wrapper returns native joint positions unchanged. Native review
 confirms that `get_joint` returns six zeros until the control-loop cache becomes
-valid, and construction returns without a cache-readiness barrier. A zero vector
-therefore does not establish a physical zero pose.
+valid, and construction returns without a cache-readiness barrier. An all-zero
+SDK vector before the first target therefore does not establish a physical zero
+pose. Compare all six SDK positions with fresh independent CAN feedback.
 
-Python 包装层原样返回原生关节位置。原生审查确认 `get_joint` 在控制循环缓存
-有效前返回六个零，而构造返回前没有缓存就绪屏障。因此六个零不能单独证明
-机械臂实际处于零姿态。
+Python 包装层原样返回原生关节位置。原生审查确认 `get_joint` 在控制循环缓存有效前
+返回六个零，而构造返回前没有缓存就绪屏障。因此首次目标前取得六个零，不能证明
+机械臂实际处于零姿态；应逐轴与独立接收的真实新 CAN 反馈核对。
 
 Version 0.6.10 permits a guarded readiness wait only before the first fixed raw
 joint seed of current-pose startup. Its single absolute deadline is no more than
@@ -205,17 +217,22 @@ statically with symbol tables and disassembly, without loading a controller.
 
 ## Native velocity-range mismatch and correction / 原生速度量程差异与修正
 
-The evidence below describes the uncorrected core, which the range gate rejects
-when its ranges differ from verified motor settings. The passive profile must use
-ranges read from the installed motors. Arm velocity is decoded motor rad/s
-multiplied by `sdk_scale` and `urdf_scale`; coordinate signs must agree with the
-reviewed SDK YAML and URDF. Do not add a reduction ratio or degrees-to-radians
-conversion without evidence that the hardware coordinates require it.
+The evidence below describes the uncorrected core; that state is still rejected
+by the range gate when the verified hardware ranges differ. The supplied
+correction targets installations whose confirmed RID22 (`VMAX`) is 10 rad/s for
+J1–J3 and 30 rad/s for J4–J6; those values are not a universal hardware default.
+The passive profile must use the actual verified ranges. Arm velocity conversion
+multiplies decoded motor rad/s by `sdk_scale` and `urdf_scale`; the pinned YAML
+`motor_signs` are `[1, -1, -1, -1, -1, 1]`. Validate coordinate transforms against
+the installed assembly; do not add a reduction or degrees-to-radians conversion
+without evidence that the selected coordinate path requires it.
 
-下述证据描述未应用源码修正的核心；与已核对电机配置量程不同时，量程门禁拒绝该
-核心。被动监听配置必须使用实机读回量程。臂部速度由解码电机 rad/s 乘 `sdk_scale`
-和 `urdf_scale` 得到，坐标方向须与已审查的 SDK YAML 和 URDF 一致；没有硬件坐标
-依据时，不应额外增加减速比或角度转弧度系数。
+下述证据描述未应用源码修正的核心；实物量程与其不一致时仍由门禁拒绝。提供的修正
+针对已确认 J1–J3 RID22（`VMAX`）为 10 rad/s、J4–J6 为 30 rad/s 的装配，这些值
+不是通用硬件默认值。被动监听配置必须使用实物已核实的量程。臂部速度转换为解码
+电机 rad/s 乘 `sdk_scale` 和 `urdf_scale`；固定 YAML 的 `motor_signs` 为
+`[1, -1, -1, -1, -1, 1]`。坐标变换须按实物核对，不能无依据增加减速比或角度转
+弧度系数。
 
 The core hardcodes J1–J3 as `DM4340` (type 3), whose compiled table is
 `[pMax, vMax, tMax] = [12.5, 8, 28]`; J4–J6 use `DM4310` (type 1), with
@@ -315,8 +332,8 @@ missing/partial/changed builds, prior native loads and inconsistent process reus
 A missing valid correction retains the original 0.6.11 range rejection; installing
 and rebinding it permits engineering `follow/monitor` to pass that gate. Existing
 startup, CAN, fault, temperature, limit, jump, derivative and Leader-gap protections
-remain active. TypeLJ mass coverage and a measured unloaded baseline still prevent
-current `run`; native-board output arbitration is independently unvalidated.
+remain active. Model coverage, measured unloaded/load response and native-board
+output arbitration require separate review before formal `run` authorization.
 Source delivery includes the C++ and builder, not compiled libraries, generated
 manifests, local parameters, calibration, bindings or runtime data.
 
@@ -329,16 +346,17 @@ manifests, local parameters, calibration, bindings or runtime data.
 并按真实启用的量程表与未更改的硬件配置比较。旧绑定、缺失／部分／变更构建、提前
 加载的原生核心和不一致的进程复用均被拒绝。没有有效修正时保留 0.6.11 门禁；安装
 并重新绑定后，工程 `follow/monitor` 可通过该项。原启动、CAN、故障、温度、限位、
-跳变、导数及 Leader 缺帧保护保留。模型覆盖须单独确认；动态阈值与实测响应仍阻止正式 `run`，
-原生按钮输出仲裁也独立未验证。源码交付包含 C++ 和构建工具，不含编译库、生成的
+跳变、导数及 Leader 缺帧保护保留。模型覆盖、实测空载／带载响应及原生按钮输出仲裁
+仍须单独审查，不能以通过量程门禁替代正式 `run` 授权。源码交付包含 C++ 和构建工具，不含编译库、生成的
 manifest、本机参数、校准、绑定或运行数据。
 
-A first-three-axis range discrepancy does not explain every acceleration error.
-The error alone proves neither physical acceleration nor its startup stage;
-quantization and receive timing require separate investigation.
+For an axis whose verified and native VMAX already agree, this J1–J3 mismatch
+cannot explain an acceleration-guard failure on that axis. A derived-acceleration
+error alone does not establish physical acceleration or the startup stage;
+quantization and receive timing require separate analysis.
 
-前三轴量程差异不能解释所有加速度错误。单独的报错不证明物理加速度或具体启动
-阶段；量化与接收时序需要分别排查。
+若某轴实物与原生 VMAX 已一致，就不能用前三轴的量程差异解释该轴加速度检查失败。
+仅凭估计加速度报错，不能确认真实加速度或启动阶段；量化与接收时间问题须独立分析。
 
 ### Output before verified feedback / 验证反馈之前的原生输出
 
@@ -354,7 +372,7 @@ barrier (`0x96f53–0x9712a`), and marks its joint cache valid (`0x971d6`).
 (`0x28b60–0x28c03`); it is not a fresh, enabled all-six-axis handshake. A sampled
 native pose can therefore be stale or uninitialized even though mode 0 normally
 uses measured positions. This finding does not establish that such a sample
-caused the observed exit.
+causes any particular reported failure.
 
 此前启动限制同样未解决。原生 mode 0 每轮使用当期采样姿态、零目标速度/加速度、
 非零 MIT 增益和所配重力前馈，不捕获固定启动保持。`Motor::Motor` 将位置、速度、
@@ -363,7 +381,7 @@ caused the observed exit.
 后直接使用这些位置，没有逐轴有效性/时间戳屏障（`0x96f53–0x9712a`），随后把
 关节缓存标记为有效（`0x971d6`）。`Startouch::recv_all` 只读取当前可用帧，直到
 无数据（`0x28b60–0x28c03`），不构成六轴新鲜已使能反馈握手。因此即使 mode 0
-通常使用实测位置，原生采样仍可能过期或尚未初始化。这不能单独解释某次真机退出。
+通常使用实测位置，原生采样仍可能过期或尚未初始化，不能仅据此归因某次报错。
 
 Enabling occurs inside `initial_startouch` before the native loop and before
 Python can publish its first fixed target. External CAN guards can reject the
@@ -426,18 +444,23 @@ TypeLJ 质量覆盖或原生按钮与软件力输出的仲裁。
 
 ## TypeLJ inertial evidence / TypeLJ 惯量证据
 
-When the selected whole-arm URDF is confirmed to include TypeLJ, record
-`mass_coverage: urdf_includes_typelj` and `payload: null`, avoiding duplicate mass.
-This declaration does not change SDK inertias or add viewer mass, and it does not
-establish dynamic-threshold or hardware acceptance. An explicitly authorized
-experiment may use `max_mw: null` without an additional experimental cap; ordinary
-caps and the configured per-axis rise rates remain. Formal `run` stays blocked.
+Each installation must establish whether its whole-arm URDF includes the
+installed TypeLJ assembly. When coverage is supported, record
+`mass_coverage: urdf_includes_typelj` and `payload: null` to avoid adding the same
+mass twice. Otherwise keep coverage unconfirmed or provide a separately reviewed
+payload model. A configuration declaration is not new manufacturer evidence or
+acceptance of dynamic thresholds and hardware performance. The experimental
+contract may use `max_mw: null` only with confirmed coverage; this removes the
+additional experiment ceiling and uses each configured per-axis rise rate.
+Common and per-axis power caps remain active. Formal `run` requires its own
+reviewed authorization.
 
-确认所选整臂 URDF 完整覆盖 TypeLJ 后，记录
-`mass_coverage: urdf_includes_typelj`、`payload: null`，避免重复计入质量。
-该声明不修改 SDK 惯量或添加展示模型质量，也不代表动态阈值或实机效果已验收。
-明确授权的实验可用 `max_mw: null` 取消额外实验上限；普通上限和逐轴配置的上升
-速率仍生效，正式 `run` 继续禁止。
+每套装配须先确认整臂 URDF 是否覆盖实装 TypeLJ。覆盖有依据时记录
+`mass_coverage: urdf_includes_typelj`、`payload: null`，避免重复添加质量；否则
+保持覆盖未确认，或提供单独审查的附加载荷模型。配置声明不是厂家新增证据，也不
+代表动态阈值及实机效果已验收。只有确认覆盖后，实验契约才允许 `max_mw: null`；
+该值取消额外实验上限，并使用各轴配置的上升速率。共同及每轴功率上限继续生效，
+正式 `run` 仍需自己的审核授权。
 
 The pinned [Gitee URDF](https://gitee.com/lu-ming-robotics---shenzhen--g/startouch_sdk/blob/040412542c0b6b6fd2bb6dd652c0de6c666631be/src/config/FastTouchV2.SLDASM.urdf#L337)
 is the same `FastTouchV2.SLDASM` model as GitHub. Its link6 has mass 0.5581 kg,
@@ -454,9 +477,9 @@ does not identify TypeLJ. Its 85 mm total finger travel and 0.15584 m finger ori
 match the SDK's TypeFZ descriptions; TypeLJ is described as 80 mm/0.17334 m.
 Neither geometry resemblance nor a display model confirms TypeLJ inertia. Adding
 the V3 total to link6 could double-count existing wrist/gripper parts. These static
-sources alone do not establish TypeLJ coverage; verify the actual assembly before
-recording its coverage declaration. A measured unloaded baseline and
-reviewed load response are still required for formal `run`.
+sources alone do not establish TypeLJ coverage for an installation. Record the
+assembly-specific evidence separately. A measured unloaded baseline and reviewed
+load response are still required for formal `run`.
 
 固定 [Gitee URDF](https://gitee.com/lu-ming-robotics---shenzhen--g/startouch_sdk/blob/040412542c0b6b6fd2bb6dd652c0de6c666631be/src/config/FastTouchV2.SLDASM.urdf#L337)
 与 GitHub 是同一个 `FastTouchV2.SLDASM` 模型。link6 质量 0.5581 kg，重心
@@ -469,62 +492,68 @@ reviewed load response are still required for formal `run`.
 0.571790 kg，但来源没有确认 TypeLJ。其双指总行程 85 mm、指根位置 0.15584 m
 与 SDK 的 TypeFZ 说明吻合；TypeLJ 说明为 80 mm／0.17334 m。外形相似或展示模型
 都不能确认 TypeLJ 惯量，将该合计叠加 link6 还可能重复计入腕部／夹爪部件。
-这些静态资料本身没有确定 TypeLJ 覆盖；应先核对实际装配，再记录覆盖声明。
+这些静态资料本身没有确定某套装配的 TypeLJ 覆盖，应单独记录对应实物的覆盖依据。
 正式 `run` 仍需要实测空载基线和经核对的带载响应。
 
 
-## 0.6.22 damping rise timing / 阻尼上升时序
+## Experimental damping rise timing / 实验阻尼上升时序
 
-This update changes the rise-rate behavior documented for 0.6.21 above; the SDK,
-URDF and TypeLJ assembly declaration are unchanged. With confirmed model coverage
-and `max_mw: null`, each axis now uses `profile.policy[].rise_mw_s` without the
-additional 100 mW/s experiment limit. The configured rate requires hardware-specific
-review. Contracts with a numeric 1–200 mW additional
-ceiling retain `min(configured rise, 100 mW/s)`. Telemetry and the page expose the
-seven actual effective rise rates.
+With confirmed model coverage and `max_mw: null`, each axis uses
+`profile.policy[].rise_mw_s` without the additional 100 mW/s experiment limit.
+Contracts with a numeric 1–200 mW additional ceiling retain
+`min(configured rise, 100 mW/s)`. Telemetry and the page expose the seven actual
+effective rise rates. Select and validate rates for the installed hardware;
+source delivery does not include an individual machine's tuning.
 
-Synthetic tests exercise J4 alone with a sustained static residual, while all
-other axes remain below threshold. Once filtering and confirmation permit output,
-a saturated request rises from 0 to 1200 mW in about 0.2 seconds at 6000 mW/s.
-Filtering and confirmation take additional time; no motion by another axis is
+Synthetic tests exercise J4 alone with a sustained static residual while other
+axes remain below threshold. Once filtering and load confirmation permit output,
+the ideal power-ramp time is `requested power change / effective rise rate`;
+filtering and confirmation add separate delay. No motion by another axis is
 required. The steady-state residual-to-power mapping, full-output torque scale,
-deadzones, native-board arbitration, ordinary caps and disabled software/automatic
-HOLD remain unchanged. A small mapped request remains small. These tests establish
-software timing behavior, not physical damping feel or load-response acceptance.
+deadzones, native-board arbitration, ordinary caps and disabled experimental
+software/automatic HOLD are unchanged. A small mapped request remains small.
+These tests establish software timing behavior, not physical damping feel or
+load-response acceptance.
 
-本次修改上文记录的 0.6.21 上升速率行为；SDK、URDF 和 TypeLJ 装配声明保持不变。
 已确认模型覆盖且 `max_mw: null` 时，每轴按 `profile.policy[].rise_mw_s` 上升，
-不再叠加 100 mW/s 的实验限制；配置的上升速率仍需针对实际硬件核对。
-数字 1–200 mW 额外上限契约继续使用 `min(配置上升速率, 100 mW/s)`。
-遥测和网页显示七轴实际生效上升速率。
+不再叠加 100 mW/s 实验限制。数字 1–200 mW 额外上限契约继续使用
+`min(配置上升速率, 100 mW/s)`。遥测和网页显示七轴实际生效上升速率。各轴速率应
+按实装硬件选择并验证，源码交付不包含某台机器的调参文件。
 
 合成测试只对 J4 施加持续静态残差，其他轴保持阈值以下。滤波及负载确认允许输出后，
-在 6000 mW/s 下，饱和请求的纯 0→1200 mW 上升斜坡约需 0.2 秒；滤波与确认时间另计，
-无需移动其他轴。稳态残差到功率的映射、满输出力矩标尺、死区、原生按钮仲裁、普通
-上限及关闭的软件／自动 HOLD 均保持不变，小映射请求仍然较小。这些测试只验证软件
-时序，不代表真机阻尼手感或带载响应已验收。
+理想功率斜坡时间为 `请求功率变化 / 实际上升速率`，滤波与确认延迟另计，无需移动
+其他轴。稳态残差到功率的映射、满输出力矩标尺、死区、原生按钮仲裁、普通上限及
+实验模式中关闭的软件／自动 HOLD 均保持不变，小映射请求仍然较小。这些测试只验证
+软件时序，不代表真机阻尼手感或带载响应已验收。
 
-## 0.6.24 Initial baseline follows real release and target arrival
+## Initial baseline timing / 首次基线采集时机
 
-A stationary baseline collected before native release and the initial approach
-to the Leader pose could apply a supported-startup threshold to a different
-operating pose. A faster power rise can expose such a false request sooner;
-it does not create the model residual.
+A stationary supported startup pose must not supply the initial baseline before
+native release or while approaching the Leader target. Increasing output rise
+rate can expose an existing false residual request sooner; it does not establish
+that the residual represents external load.
 
-The initial collection gate now requires a complete real native release, a
-complete successful following write, limiter arrival at the original clipped
+Initial collection requires a complete real native release, a complete
+successful following write, limiter arrival at the original joint-limit-clipped
 Leader target, measured proximity, and continuous target/measured stationarity.
-The original two-second stationary window and absolute residual method remain.
-No travel limits, model mass/COM/inertia, torque signs, gain scales or motion
-speeds are enlarged. Frozen baselines are never updated from later loads.
-This corrects collection timing; unloaded separation across other poses still
-requires explicit unloaded observations and cannot be inferred from one pose.
+The two-second stationary window and absolute residual method remain. No travel
+limits, model mass/COM/inertia, torque signs, gain scales or motion speeds are
+enlarged. Frozen baselines are never updated from later loads. This gate corrects
+collection timing; unloaded separation across other poses requires explicit
+unloaded observations and cannot be inferred from one pose.
 
-在按钮释放和初次跟随接近 Leader 之前冻结静止基线，可能将支撑起始姿态的局部
-阈值用于另一运行姿态。较快的功率上升可能更快暴露误请求，但不会创造模型残差。
+按钮尚未真实释放或初次跟随尚未到达 Leader 目标时，不能使用支撑姿态冻结首次
+基线。加快功率上升可能更快暴露已有的残差误请求，不能据此认定残差代表外部负载。
 
-首次采集现在要求完整真实原生释放、完整成功跟随发送、限速目标到达原限位裁剪
-后的 Leader 目标、实测接近，以及目标／实测连续静止；保留原两秒窗口与绝对
-残差方法。不扩大行程，不修改质量／重心／惯量、力矩方向、映射增益或运动速度。
-冻结后不再从后续负载更新基线。此修复只校正采集时机；其他姿态的空载分离仍需
-明确空载观察，不能由一个姿态推断。
+首次采集要求完整真实原生释放、完整成功跟随发送、限速目标到达原限位裁剪后的
+Leader 目标、实测接近，以及目标／实测连续静止；保留两秒窗口与绝对残差方法。
+不扩大行程，不修改质量／重心／惯量、力矩方向、映射增益或运动速度。冻结后不再
+从后续负载更新基线。该门控校正采集时机，其他姿态的空载分离仍需明确空载观察，
+不能由一个姿态推断。
+
+
+### 0.6.28 baseline admission groups / 基线准入分组
+
+Arm and gripper now have separate arrival admission and startup baseline statistics. Both estimators still require seven-axis measured stationarity. The first successful group closes collection: groups ready in that cycle freeze, and remaining groups keep zero damping until a new session. No baseline is learned while qualified damping runs. The six arm axes still use one whole-arm inverse-dynamics calculation. Physical ranges, tolerances, native button handling and SDK initialization are unchanged.
+
+六轴和夹爪分别检查到位并保存启动基线统计，两个估计器仍要求七轴实测静止。首组成功时关闭采集：当周期已就绪组冻结，其余组本次会话保持零阻尼，不在已启用阻尼期间补学。六轴仍使用整臂逆动力学一次计算。物理范围、允差、原生按钮处理及 SDK 初始化不变。

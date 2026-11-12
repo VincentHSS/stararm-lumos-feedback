@@ -67,6 +67,6 @@ sudo apt-get install -y \
 "$PYTHON_BIN" -m pip install "$SDK_DIR"
 
 "$PYTHON_BIN" -c "import serial, fashionstar_uart_sdk; from startouchclass import SingleArm; print('StarArm 与 Lumos SDK 安装成功')"
-echo "SDK 依赖安装完成。请按 README 使用 lumos-lerobot 配置并启动遥操作。"
+echo "硬件依赖已安装。LeRobot 集成请继续使用 scripts/install_lerobot_ubuntu.sh"
 echo "Lumos SDK 源码：$SDK_DIR"
 echo "Lumos 运行配置：$SDK_DIR/src/config/robot_kinematics.yaml（请保留 SDK 源码目录）"

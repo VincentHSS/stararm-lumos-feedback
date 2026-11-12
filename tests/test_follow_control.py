@@ -37,8 +37,8 @@ class FollowControlTests(unittest.TestCase):
                 teleop.find_sdk_root(Path(directory) / "missing")
 
     def test_speed_independent_of_normal_loop_rate(self):
-        # Exercise the documented 50 deg/s scenario explicitly: the standalone
-        # script's user-tunable default is currently 100 deg/s.
+        # Exercise the 50 deg/s scenario explicitly, independently of any future
+        # changes to the packaged legacy bridge's user-tunable default.
         with patch.object(teleop, "MAX_SPEED_DEG_PER_SEC", 50.0):
             for hz in (25, 50, 100):
                 with self.subTest(hz=hz):

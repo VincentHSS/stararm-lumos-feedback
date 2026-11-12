@@ -338,7 +338,7 @@ vm.runInContext(`
       if($("feedbackBlocked").hidden||$("feedbackBlocked").textContent!==copy[lang].force_profile_unreviewed)throw new Error("Force readiness reason missing");
       for(const mode of ["follow","monitor","run"]){
         state.connection={...state.connection,state:"active",mode,can_start:false,can_stop:true};render();
-        if(!$("connectionSummary").textContent.includes(copy[lang][mode])||!$("connectionSummary").textContent.includes(copy[lang][mode+"Note"]))throw new Error("Current motion mode incorrectly described");
+        if(!$("connectionSummary").textContent.includes(copy[lang][mode])||!$("modeNote").textContent.includes(copy[lang][mode+"Note"]))throw new Error("Current motion mode incorrectly described");
         if($("connectionSummary").textContent.includes(copy[lang].connectionQueryNote))throw new Error("Motion described as read-only queries");
         if(!$("status").textContent.includes(copy[lang][mode])||$("modeNote").textContent!==copy[lang][mode+"Note"])throw new Error("Motion mode label missing");
         if(["connectHardware","startFollowing","startMonitoring","startFeedback"].some(id=>!$(id).disabled))throw new Error("Mode can switch during an active session");
