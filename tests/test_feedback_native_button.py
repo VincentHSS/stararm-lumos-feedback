@@ -334,35 +334,6 @@ class NativeButtonAdapterTests(unittest.TestCase):
         self.assertTrue(self.leader.hd_button.verified)
         self.assertFalse(self.uart.writes)
 
-    def test_detection_waits_for_last_axis_when_one_read_contains_complete_then_partial_group(self):
-        transition = group(0x11)
-
-        def on_waiting():
-            # A prior complete release cannot confirm the newer lock while
-            # its final joint command is still arriving.
-            self.uart.scheduled = [(0, group() + transition[:-9]), (0.04, transition[-9:])]
-
-        self.leader.button_waiting = on_waiting
-        self.connect()
-        self.assertGreaterEqual(self.clock(), 0.04)
-        self.assertTrue(self.leader.hd_button.verified)
-        self.assertFalse(self.leader.hd_button.pending)
-        self.assertTrue(self.leader.hd_button.locked)
-        self.assertEqual(self.leader.hd_button.completed_groups, 2)
-        self.assertFalse(self.uart.writes)
-
-    def test_detection_remains_cancellable_after_complete_then_partial_group(self):
-        self.leader.button_wait_until_cancel = True
-        self.leader.connection_cancel = ScheduledCancel(self.clock, at=0.06)
-        self.leader.button_waiting = lambda: self.uart.rx.extend(group() + group(0x11)[:-9])
-        with self.assertRaises(self.adapter.ButtonDetectionCancelled):
-            self.connect()
-        self.assertGreaterEqual(self.clock(), 0.06)
-        self.assertLess(self.clock(), 0.1)
-        self.assertFalse(self.uart.is_open)
-        self.assertIsNone(self.leader.hd_button)
-        self.assertFalse(self.uart.writes)
-
     def test_no_board_never_probes_or_notifies_native_wait(self):
         self.leader.config.button_enabled = False
         self.leader.button_waiting = lambda: self.fail("Absent board must not await native press")

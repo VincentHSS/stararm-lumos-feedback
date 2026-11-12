@@ -3,7 +3,6 @@
 import json
 import math
 import struct
-import threading
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -83,28 +82,6 @@ class ExperimentSessionTests(FixtureCase):
         profile.experimental_damping = None
         with self.assertRaisesRegex(ValueError, "explicit engineering"):
             Session(profile, robot, leader, Caps(), mode="experiment")
-
-    def test_local_reference_is_explicit_boolean_and_requires_confirmed_mass(self):
-        options = self.data["commissioning"]["experimental_damping"]
-        self.assertNotIn("local_reference_enabled", self.profile_for().experimental_damping)
-        options["local_reference_enabled"] = False
-        without_reference = self.profile_for().binding()
-        options["local_reference_enabled"] = True
-        with self.assertRaisesRegex(ValueError, "confirmed model mass"):
-            self.profile_for()
-        self.data.update(mass_coverage="urdf_includes_typelj", payload=None)
-        self.assertTrue(self.profile_for().experimental_damping["local_reference_enabled"])
-        self.assertNotEqual(self.profile_for().binding(), without_reference)
-        for value in (0, 1, None, "true", {}, []):
-            with self.subTest(value=value):
-                options["local_reference_enabled"] = value
-                with self.assertRaisesRegex(ValueError, "must be a boolean"):
-                    self.profile_for()
-
-    def test_local_reference_cannot_be_enabled_by_an_unknown_contract_field(self):
-        self.data["commissioning"]["experimental_damping"]["local_reference_enable"] = True
-        with self.assertRaisesRegex(ValueError, "expected fields"):
-            self.profile_for()
 
     def test_explicit_web_mode_available_but_formal_run_stays_blocked(self):
         profile = self.profile_for("inspect")
@@ -263,203 +240,6 @@ class ExperimentSessionTests(FixtureCase):
             session.initial_baseline_admission(session.monitor.snapshot())["reason"], "waiting_follower_settled",
         )
 
-    def assert_baseline_groups(self, admission, *, arm_reason, gripper_reason):
-        self.assertEqual(admission["groups"], {
-            "arm": {
-                "allowed": arm_reason == "baseline_admission_allowed",
-                "reason": arm_reason,
-                "axis_indices": list(range(6)),
-            },
-            "gripper": {
-                "allowed": gripper_reason == "baseline_admission_allowed",
-                "reason": gripper_reason,
-                "axis_indices": [6],
-            },
-        })
-
-    def test_gripper_static_error_allows_whole_arm_admission_without_widening_tolerances(self):
-        session, _, robot, _ = self.baseline_session()
-        session._baseline_completed_send = [0] * 6 + [0.5]
-        settled_admission = session.initial_baseline_admission(self.samples(0))
-        samples = self.samples(1, q=[0] * 6 + [0.4341])
-        before = deepcopy((session.desired, session._baseline_completed_send, robot.limits,
-                           session.profile.gripper_transform))
-
-        admission = session.initial_baseline_admission(samples)
-
-        self.assertFalse(admission["allowed"])
-        self.assertEqual(admission["reason"], "waiting_follower_settled")
-        self.assert_baseline_groups(
-            admission, arm_reason="baseline_admission_allowed", gripper_reason="waiting_follower_settled",
-        )
-        self.assertAlmostEqual(admission["arrival_error"][6], -0.0659)
-        # The public fixture's bound motor uncertainty maps to >2% opening.
-        # Splitting the groups must preserve that existing tolerance too.
-        self.assertGreaterEqual(admission["arrival_tolerance"][6], 0.02)
-        self.assertEqual(admission["target_tolerance"], settled_admission["target_tolerance"])
-        self.assertEqual(admission["arrival_tolerance"], settled_admission["arrival_tolerance"])
-        self.assertEqual(admission["blocked_axes"], ["gripper"])
-        self.assertEqual((session.desired, session._baseline_completed_send, robot.limits,
-                          session.profile.gripper_transform), before)
-
-    def test_one_arm_joint_not_arrived_blocks_all_six_arm_axes_only(self):
-        session, _, _, _ = self.baseline_session()
-        session._baseline_completed_send = [0] * 6 + [0.5]
-        samples = self.samples(1, q=[0, 0, 0, 0.09, 0, 0, 0.5])
-
-        admission = session.initial_baseline_admission(samples)
-
-        self.assertFalse(admission["allowed"])
-        self.assertEqual(admission["reason"], "waiting_follower_settled")
-        self.assert_baseline_groups(
-            admission, arm_reason="waiting_follower_settled", gripper_reason="baseline_admission_allowed",
-        )
-        self.assertEqual(admission["blocked_axes"], ["J4"])
-        self.assertAlmostEqual(admission["arrival_tolerance"][3], math.radians(2))
-
-    def test_target_limiter_catchup_blocks_only_its_own_baseline_group(self):
-        for axis, target, arm_reason, gripper_reason in (
-            (3, 0.4, "waiting_follow_target", "baseline_admission_allowed"),
-            (6, 0.8, "baseline_admission_allowed", "waiting_follow_target"),
-        ):
-            with self.subTest(axis=axis):
-                session, _, _, _ = self.baseline_session()
-                session._baseline_completed_send = [0] * 6 + [0.5]
-                session.desired[axis] = target
-
-                admission = session.initial_baseline_admission(self.samples(1))
-
-                self.assertFalse(admission["allowed"])
-                self.assertEqual(admission["reason"], "waiting_follow_target")
-                self.assert_baseline_groups(admission, arm_reason=arm_reason, gripper_reason=gripper_reason)
-                self.assertEqual(admission["target_blocked_axes"], ["J4" if axis == 3 else "gripper"])
-                self.assertEqual(admission["arrival_blocked_axes"], [])
-
-    def test_common_admission_prerequisites_block_both_groups_with_same_reason(self):
-        for condition, reason in (
-            ("native_unconfirmed", "waiting_native_unlock"),
-            ("no_complete_send", "waiting_first_follow_command"),
-            ("partial_send", "baseline_admission_missing"),
-            ("missing_feedback", "baseline_admission_missing"),
-            ("invalid_limits", "baseline_admission_missing"),
-        ):
-            with self.subTest(condition=condition):
-                session, _, robot, _ = self.baseline_session(released=condition != "native_unconfirmed")
-                session._baseline_completed_send = [0] * 6 + [0.5]
-                samples = self.samples(1)
-                if condition == "no_complete_send":
-                    session._baseline_completed_send = None
-                elif condition == "partial_send":
-                    session._baseline_completed_send = [0] * 6
-                elif condition == "missing_feedback":
-                    samples = samples[:6]
-                elif condition == "invalid_limits":
-                    robot.limits = ([0] * 6, [0] * 6)
-
-                admission = session.initial_baseline_admission(samples)
-
-                self.assertFalse(admission["allowed"])
-                self.assertEqual(admission["reason"], reason)
-                self.assert_baseline_groups(admission, arm_reason=reason, gripper_reason=reason)
-                self.assertIsNone(admission["target_error"])
-                self.assertIsNone(admission["arrival_error"])
-
-    def test_both_baseline_groups_allow_once_their_own_targets_arrive(self):
-        session, _, _, _ = self.baseline_session()
-        session._baseline_completed_send = [0] * 6 + [0.5]
-
-        admission = session.initial_baseline_admission(self.samples(1))
-
-        self.assertTrue(admission["allowed"])
-        self.assert_baseline_groups(
-            admission, arm_reason="baseline_admission_allowed", gripper_reason="baseline_admission_allowed",
-        )
-        self.assertEqual(admission["blocked_axes"], [])
-
-    def test_baseline_diagnostics_identify_target_and_arrival_axes_in_their_real_units(self):
-        session, _, _, _ = self.baseline_session()
-        session.desired = [0, 0, 0, 0.4, 0, 0, 0.8]
-        session._baseline_completed_send = [0, 0, 0, 0.2, 0, 0, 0.8]
-        samples = self.samples(1, q=[0, 0, 0, 0.19, 0, 0, 0.5])
-        before = deepcopy((session.desired, session._baseline_completed_send, samples))
-
-        admission = session.initial_baseline_admission(samples)
-
-        self.assertFalse(admission["allowed"])
-        self.assertEqual(admission["reason"], "waiting_follow_target")
-        self.assertEqual(admission["axis_names"], ["J1", "J2", "J3", "J4", "J5", "J6", "gripper"])
-        self.assertEqual(admission["axis_units"], ["rad"] * 6 + ["normalized_opening"])
-        self.assertEqual(admission["target"], session.desired)
-        self.assertEqual(admission["sent_target"], session._baseline_completed_send)
-        self.assertEqual(admission["measured_position"], [sample.q for sample in samples])
-        self.assertAlmostEqual(admission["target_error"][3], 0.2)
-        self.assertAlmostEqual(admission["arrival_error"][3], -0.01)
-        self.assertAlmostEqual(admission["arrival_error"][6], -0.3)
-        self.assertAlmostEqual(admission["arrival_tolerance"][3], math.radians(2))
-        self.assertEqual(admission["target_blocked_axes"], ["J4"])
-        self.assertEqual(admission["arrival_blocked_axes"], ["gripper"])
-        self.assertEqual(admission["blocked_axes"], ["J4", "gripper"])
-        self.assertEqual((session.desired, session._baseline_completed_send, samples), before)
-
-        # Catching up the sent arm command changes only the existing gate
-        # priority: the same measured gripper mismatch still blocks admission.
-        session._baseline_completed_send[3] = 0.4
-        samples = self.samples(2, q=[0, 0, 0, 0.39, 0, 0, 0.5])
-        admission = session.initial_baseline_admission(samples)
-        self.assertEqual(admission["reason"], "waiting_follower_settled")
-        self.assertEqual(admission["target_blocked_axes"], [])
-        self.assertEqual(admission["blocked_axes"], ["gripper"])
-        samples = self.samples(3, q=[0, 0, 0, 0.39, 0, 0, 0.79])
-        admission = session.initial_baseline_admission(samples)
-        self.assertTrue(admission["allowed"])
-        self.assertEqual(admission["blocked_axes"], [])
-        self.assertEqual(session.controller.outputs(False), ([0] * 7, [False] * 7))
-
-    def test_missing_baseline_admission_data_is_unknown_instead_of_retaining_old_axis_errors(self):
-        session, _, _, _ = self.baseline_session()
-        session._baseline_completed_send = [0] * 6 + [0.8]
-        session.initial_baseline_admission(session.monitor.snapshot())
-        session._baseline_completed_send = None
-
-        admission = session.initial_baseline_admission(session.monitor.snapshot())
-
-        self.assertFalse(admission["allowed"])
-        self.assertEqual(admission["reason"], "waiting_first_follow_command")
-        for key in (
-            "target", "sent_target", "measured_position", "target_error", "target_tolerance",
-            "arrival_error", "arrival_tolerance", "target_blocked_axes", "arrival_blocked_axes", "blocked_axes",
-        ):
-            self.assertIsNone(admission[key])
-        self.assertEqual(session._baseline_admission_diagnostics, admission)
-        json.dumps(admission, allow_nan=False)
-
-    def test_publication_preserves_last_seven_axis_admission_after_adapter_cleanup_without_rechecking(self):
-        session, _, robot, _ = self.baseline_session()
-        session._baseline_completed_send = [0] * 6 + [0.8]
-        session.desired[6] = 0.8
-        samples = session.monitor.snapshot()
-        published = []
-        session.dashboard = SimpleNamespace(publish=lambda **state: published.append(state))
-        with patch.object(session.transport, "observe_native_state", wraps=session.transport.observe_native_state) as observe:
-            admission = session.initial_baseline_admission(samples)
-            self.assertEqual(admission["reason"], "waiting_follower_settled")
-            robot.last_action_diagnostics = dict(sent_sdk_rad=[0] * 6)
-            session.publish("active", samples)
-            # Adapter cleanup clears ordinary diagnostics. The gate snapshot
-            # must retain its actual gripper command and measurements.
-            robot.last_action_diagnostics = None
-            session.leader.last_action_diagnostics = None
-            session._baseline_completed_send[6] = 0.9
-            session.publish("stopped")
-            self.assertEqual(observe.call_count, 1)
-
-        for state in published:
-            self.assertEqual(state["baseline_admission"], admission)
-            self.assertEqual(state["baseline_admission"]["sent_target"][6], 0.8)
-            self.assertEqual(state["baseline_admission"]["measured_position"][6], 0.5)
-            self.assertEqual(state["baseline_admission"]["blocked_axes"], ["gripper"])
-        self.assertEqual(published[-1]["requested_mw"], [0] * 7)
-
     def test_native_rx_rechecked_before_baseline_and_partial_action_cannot_qualify(self):
         session, uart, robot, _ = self.baseline_session()
         session._baseline_completed_send = [0] * 6 + [0.5]
@@ -486,10 +266,7 @@ class ExperimentSessionTests(FixtureCase):
         session, _, _, button = self.baseline_session(released=False)
         sequence, now = 0, 100.0
         session.controller.clock = lambda: now
-        # Keep both groups unqualified through the staged startup checks.
-        # Otherwise an already-arrived gripper can validly close the initial
-        # unloaded window before this test reaches arm arrival.
-        q = [0] * 6 + [0.4]
+        q = [0] * 6 + [0.5]
 
         def advance(count):
             nonlocal sequence, now
@@ -518,7 +295,6 @@ class ExperimentSessionTests(FixtureCase):
         advance(130)  # Sent target arrived; measured Follower still has not.
         self.assertEqual(session.controller.snapshot()["reason"], "waiting_follower_settled")
         q[3] = 0.49
-        q[6] = 0.5
         advance(70)
         self.assertFalse(session.controller.snapshot()["baseline_frozen"])
         advance(40)
@@ -550,7 +326,7 @@ class ExperimentSessionTests(FixtureCase):
         session = Session(profile, FakeRobot(), leader, Caps(), mode="experiment", monitor=LiveMonitor(profile))
         button = CommandButtonState()
         button.feed(b"".join(packet(24, struct.pack("<BBH", i, 0x10, 0)) for i in range(6)))
-        session.transport = SimpleNamespace(command_button=button, native_output_unknown=True, lock=threading.RLock(),
+        session.transport = SimpleNamespace(command_button=button, native_output_unknown=True,
                                             observe_native_state=lambda: False)
         session.reader = LeaderReader(leader, session.transport)
         session._sdk_history_ready = True

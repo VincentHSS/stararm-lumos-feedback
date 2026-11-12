@@ -163,118 +163,6 @@ async function main(){
     assert.ok(nodes.get("experimentalStatus").textContent.includes("Additional experimental power cap: —"));
     assert.ok(nodes.get("experimentalCaps").textContent.includes("J1 —"),"Absent metadata was treated as uncapped");
     assert.equal(requests.length,0,"Displaying model confirmation or caps sent a command");
-  }else if(scenario==="baseline_admission"){
-    run(`
-      state.mode="experiment";state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();
-      state.experimental={state:"waiting_baseline",baseline_frozen:false,reason:"waiting_follower_settled"};
-      state.baseline_admission={allowed:false,reason:"waiting_follower_settled",
-        axis_names:["J1","J2","J3","J4","J5","J6","gripper"],
-        axis_units:["rad","rad","rad","rad","rad","rad","normalized_opening"],
-        target:[0,0,0,-0.3,0,0,0.5],sent_target:[0,0,0,-0.4,0,0,0.5],measured_position:[0,0,0,-0.6,0,0,0.13],
-        target_error:[0,0,0,0.1,0,0,0],target_tolerance:[0.01,0.01,0.01,0.01,0.01,0.01,0.01],
-        arrival_error:[0,0,0,-0.2,0,0,-0.37],arrival_tolerance:[0.15,0.15,0.15,0.15,0.15,0.15,0.035],
-        target_blocked_axes:["J4"],arrival_blocked_axes:["J4","gripper"],blocked_axes:["J4","gripper"]};
-      render();
-    `);
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,false);
-    assert.equal(nodes.get("baselineAdmissionRows").children.length,7);
-    for(let i=0;i<7;i++)assert.equal(nodes.get("baselineAdmissionRows").children[i].hidden,![3,6].includes(i));
-    assert.equal(text("baselineAdmissionRows",3,1),"-17.19","Arm radians were not converted to degrees");
-    assert.equal(text("baselineAdmissionRows",3,4),"5.73 / 0.57");
-    assert.equal(text("baselineAdmissionRows",3,5),"-11.46 / 8.59","Arrival error sign was inverted");
-    assert.equal(text("baselineAdmissionRows",6,0),"夹爪");
-    assert.equal(text("baselineAdmissionRows",6,1),"50.00");
-    assert.equal(text("baselineAdmissionRows",6,2),"50.00");
-    assert.equal(text("baselineAdmissionRows",6,3),"13.00","Gripper was not converted to percent opening");
-    assert.equal(text("baselineAdmissionRows",6,5),"-37.00 / 3.50");
-    const gripperRow=nodes.get("baselineAdmissionRows").children[6],gripperCell=gripperRow.children[3];
-    run('state.baseline_admission.blocked_axes=["gripper"];state.baseline_admission.measured_position[6]=0.2;render()');
-    assert.equal(nodes.get("baselineAdmissionRows").children[6],gripperRow,"Clearing one gate rebuilt other axes");
-    assert.equal(gripperRow.children[3],gripperCell,"Polling replaced an admission cell");
-    assert.equal(gripperCell.textContent,"20.00");
-    assert.equal(nodes.get("baselineAdmissionRows").children[3].hidden,true);
-    run('lang="en";translate()');
-    assert.equal(text("baselineAdmissionRows",6,0),"Gripper");
-    assert.equal(nodes.get("baselineAdmissionColumns").children[5].textContent,"Measured − sent / allowed");
-    assert.equal(JSON.stringify(run('Object.keys(copy.zh).sort()')),JSON.stringify(run('Object.keys(copy.en).sort()')));
-    run('state.baseline_admission.arrival_tolerance[6]=null;render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Incomplete gate was presented as a complete diagnostic");
-    run('state.baseline_admission.arrival_tolerance[6]=0.035;state.baseline_admission.axis_units[6]="rad";render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Unknown gripper units were displayed as opening");
-    run('state.baseline_admission.axis_units[6]="normalized_opening";state.baseline_admission.allowed=true;render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Passed gate still claimed to block damping");
-    run('state.baseline_admission.allowed=false;state.experimental.baseline_frozen=true;render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Frozen baseline was shown as awaiting admission");
-    run('state.experimental.baseline_frozen=false;state.experimental.state="active";render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Active damping was shown as blocked by motion");
-    run('state.experimental.state="waiting_baseline";state.status="stopped";state.telemetry_fresh=false;render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Stopped gate was presented as live");
-    run('state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();state.baseline_admission.blocked_axes=null;render()');
-    assert.equal(nodes.get("baselineAdmissionPanel").hidden,true,"Unavailable gate data was presented as an axis failure");
-    assert.equal(requests.length,0,"Displaying baseline diagnostics sent a command");
-  }else if(scenario==="partial_baseline"){
-    run(`
-      state.mode="experiment";state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();
-      state.experimental={state:"partially_active",ceiling_mw:null,baseline_frozen:false,
-        baseline_collection_closed:true,baseline_ready_axes:[true,true,true,true,true,true,false],
-        baseline_groups:{arm:{frozen:true},gripper:{frozen:false}},
-        reason:"arm_active_gripper_baseline_unavailable"};
-      state.baseline_admission={allowed:false,axis_names:["J1","J2","J3","J4","J5","J6","gripper"],
-        axis_units:["rad","rad","rad","rad","rad","rad","normalized_opening"],
-        target:Array(7).fill(0.5),sent_target:Array(7).fill(0.5),measured_position:Array(7).fill(0.4341),
-        target_error:Array(7).fill(0),target_tolerance:Array(7).fill(0.02),
-        arrival_error:Array(7).fill(-0.0659),arrival_tolerance:Array(7).fill(0.02),
-        blocked_axes:["J4","gripper"]};render();
-    `);
-    assert.ok(nodes.get("experimentalStatus").textContent.includes("部分关节组阻尼运行中"));
-    assert.ok(nodes.get("experimentalBaselines").textContent.includes("六轴 J1–J6: 已冻结"));
-    assert.ok(nodes.get("experimentalBaselines").textContent.includes("夹爪: 启动时未就绪 本次阻尼为 0"));
-    assert.equal(nodes.get("baselineAdmissionRows").children[3].hidden,true,"Ready arm was shown as awaiting baseline");
-    assert.equal(nodes.get("baselineAdmissionRows").children[6].hidden,false);
-    assert.equal(text("baselineAdmissionRows",6,5),"-6.59 / 2.00");
-    const row=nodes.get("baselineAdmissionRows").children[6];
-    run('lang="en";translate()');
-    assert.ok(nodes.get("experimentalBaselines").textContent.includes("Arm J1–J6: Frozen"));
-    assert.ok(nodes.get("experimentalBaselines").textContent.includes("Gripper: Unready at startup"));
-    assert.ok(nodes.get("experimentalReason").textContent.includes("gripper damping remains zero this session"));
-    assert.equal(nodes.get("baselineAdmissionRows").children[6],row,"Language switch rebuilt diagnostic rows");
-    assert.equal(requests.length,0,"Group status sent a hardware command");
-  }else if(scenario==="local_reference"){
-    run(`
-      state.mode="experiment";state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();
-      state.experimental={state:"active",local_reference:{enabled:true,available:true,in_region:true,
-        eligible:true,active:true,source:["none","none","none","local_reference","none","none"],
-        used_axes:[false,false,false,true,false,false],excess_nm:[0,0,0,0.2,0,0]}};
-      state.requested_mw=[0,0,0,240,0,0,0];render();
-    `);
-    assert.equal(nodes.get("localReferencePanel").hidden,false);
-    assert.equal(nodes.get("localReferenceTable").hidden,false);
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("正在采用局部通道"));
-    assert.equal(nodes.get("localReferenceRows").children.length,6,"Gripper entered the arm reference channel");
-    assert.equal(text("localReferenceRows",3,1),"局部参考");
-    assert.equal(text("localReferenceRows",3,2),"0.20");
-    assert.equal(text("localReferenceRows",3,3),"240.00");
-    const row=nodes.get("localReferenceRows").children[3],cell=row.children[3];
-    run('lang="en";translate()');
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Local channel selected"));
-    assert.equal(text("localReferenceRows",3,1),"Local reference");
-    assert.equal(nodes.get("localReferenceRows").children[3],row,"Language change rebuilt reference rows");
-    assert.equal(row.children[3],cell);
-    run('state.experimental.local_reference.reason="warming_local_reference";state.experimental.local_reference.active=false;render()');
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Local warmup"),"Warmup was presented as ready");
-    run('delete state.experimental.local_reference.reason');
-    run('state.experimental.local_reference.in_region=false;state.experimental.local_reference.eligible=false;state.experimental.local_reference.active=false;state.experimental.local_reference.used_axes=Array(6).fill(false);state.experimental.local_reference.source=Array(6).fill("absolute");render()');
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Outside the reference pose region"));
-    assert.equal(text("localReferenceRows",3,2),"—","Out-of-region local excess was presented as eligible");
-    run('state.status="stopped";state.telemetry_fresh=false;render()');
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Last report"));
-    assert.equal(nodes.get("localReferenceTable").hidden,true,"Stopped reference was shown as live output");
-    run('state.status="active";state.telemetry_fresh=true;stateReceivedAt=nowMs();state.experimental.local_reference={enabled:false};render()');
-    assert.ok(nodes.get("localReferenceStatus").textContent.includes("Disabled"));
-    run('delete state.experimental.local_reference;render()');
-    assert.equal(nodes.get("localReferencePanel").hidden,true,"Legacy state was shown as a local reference");
-    assert.equal(JSON.stringify(run('Object.keys(copy.zh).sort()')),JSON.stringify(run('Object.keys(copy.en).sort()')));
-    assert.equal(requests.length,0,"Local reference display sent a command");
   }else if(scenario==="tracking"){
     assert.equal(nodes.get("followRows").children.length,6);
     assert.equal(text("followRows",0,1),"—");
@@ -305,23 +193,6 @@ async function main(){
     assert.ok(nodes.get("loopTiming").textContent.includes("Overrun cycles: 7"));
     run('state.loop_timing={target_hz:100,status_hz:5};render()');
     assert.ok(nodes.get("loopTiming").textContent.includes("Actual: — Hz"),"Actual rate was inferred from configured rate");
-    const followRow=nodes.get("followRows").children[0], followCell=followRow.children[3];
-    const telemetryRow=nodes.get("rows").children[0], policyRow=nodes.get("policyRows").children[0];
-    run('state.follow_diagnostics.sent_sdk_rad[0]=Math.PI/4;render()');
-    assert.equal(nodes.get("followRows").children[0],followRow,"Polling rebuilt the following row");
-    assert.equal(followRow.children[3],followCell,"Polling rebuilt the following cell");
-    assert.equal(followCell.textContent,"45.00");
-    assert.equal(nodes.get("rows").children[0],telemetryRow,"Polling rebuilt telemetry rows");
-    assert.equal(nodes.get("policyRows").children[0],policyRow,"Polling rebuilt read-only policy rows");
-    const cap=nodes.get("cap0");
-    run('dirty=true;$("cap0").value="777";changeLanguage()');
-    assert.equal(nodes.get("cap0"),cap,"Language transition replaced the focused input");
-    assert.equal(cap.value,"777","Language transition discarded an unapplied cap");
-    run('setVisible($("experimentalPanel"),false)');
-    assert.equal(nodes.get("experimentalPanel").hidden,true,"Exit motion delayed logical hiding");
-    assert.equal(nodes.get("experimentalPanel").inert,true,"Outgoing controls stayed interactive");
-    run('setVisible($("experimentalPanel"),true)');
-    assert.equal(nodes.get("experimentalPanel").inert,false);
     assert.equal(requests.length,0,"Rendering diagnostics sent a command");
   }else throw Error("Unknown scenario");
 }
@@ -353,12 +224,3 @@ class FollowDiagnosticsTests(unittest.TestCase):
 
     def test_tracking_shows_actual_clipping_lag_and_reported_loop_rate_without_commands(self):
         self.run_scenario("tracking")
-
-    def test_baseline_gate_shows_only_complete_blocking_axes_with_signed_errors_and_correct_units(self):
-        self.run_scenario("baseline_admission")
-
-    def test_partial_baseline_reports_ready_arm_and_unavailable_gripper_in_both_languages(self):
-        self.run_scenario("partial_baseline")
-
-    def test_local_reference_reports_scope_and_selection_without_commands_or_stale_output(self):
-        self.run_scenario("local_reference")

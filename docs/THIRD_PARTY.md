@@ -12,7 +12,6 @@ This document records provenance. Component notices retain their own terms; this
 | LeRobot | [huggingface/lerobot](https://github.com/huggingface/lerobot/tree/3991580a5673f5f0219a4e8835a5f973eeccf9a7) | External dependency / 外部依赖 |
 | LumosTouch V3 display geometry | [VincentHSS/Star-Arm-102-Web-ACT](https://github.com/VincentHSS/Star-Arm-102-Web-ACT/tree/445f46f8756d9b826b17687dbdbb0c439537efcd/Browser_SDK/assets/urdf/fl-v3) | URDF/STL display resources and source records / URDF、STL 显示资源与来源记录 |
 | Three.js r169 | [mrdoob/three.js](https://github.com/mrdoob/three.js/tree/r169) | Local module and MIT notice / 本地模块及 MIT 声明 |
-| Lucide | [lucide-icons/lucide](https://github.com/lucide-icons/lucide) | Local SVG icons and ISC notice / 本地 SVG 图标及 ISC 声明 |
 
 The SDK fixture [sdk_0404125_pybind_constructor.cpp](../tests/fixtures/sdk_0404125_pybind_constructor.cpp) retains byte-exact upstream content for a fixed-hash patch regression. Paths in upstream comments are not distributed machine configuration.
 
@@ -23,7 +22,6 @@ Detailed notices / 详细声明：
 - [CAD source and authorization](../src/stararm_lumos_feedback/web/models/lumos-touch-v3/NOTICE.txt)
 - [CAD pinned source hashes](../src/stararm_lumos_feedback/web/models/lumos-touch-v3/SOURCE.json)
 - [Three.js MIT notice](../src/stararm_lumos_feedback/web/vendor/NOTICE.txt)
-- [Lucide ISC notice](../src/stararm_lumos_feedback/web/icons/LICENSE.txt)
 
 Display geometry is separate from the configured dynamics model. Inclusion of the V3 gripper does not verify exact TypeLJ shape, mass coverage or hardware behavior. Dynamics and limits use the reviewed URDF for the installed assembly.
 

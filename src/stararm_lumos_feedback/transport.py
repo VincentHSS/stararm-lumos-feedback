@@ -355,54 +355,31 @@ class Fashionstar:
         with self.lock:
             return self._native_arm_allowed()
 
-    def receive_native_commands(self):
-        """Consume bounded native RX without querying motors or transmitting."""
-        with self.lock:
-            if self.command_button is None:
-                return
-            try:
-                deadline, remaining = self.clock() + self.timeout, 4096
-                # A queued final frame cannot complete an already expired
-                # group. Check the original parser deadline before reading.
-                self.command_button.update()
-                while self.uart.in_waiting:
-                    if remaining <= 0 or self.clock() >= deadline:
-                        raise LeaderGap("Native button input did not drain before Leader output")
-                    received = self.uart.read(min(remaining, self.uart.in_waiting))
-                    if not received:
-                        raise LeaderGap("Native button input did not drain before Leader output")
-                    remaining -= len(received)
-                    self.command_button.feed(received)
-                if self.clock() >= deadline:
-                    raise LeaderGap("Native button input did not drain before Leader output")
-                self.command_button.update()
-            except Exception as exc:
-                self._forget_native_arm()
-                if self.fault is None:
-                    self.fault = str(exc)
-                raise
-
-    def settle_native_commands(self, cancel_check=None):
-        """Finish an in-flight RX group before initialization, within its deadline."""
-        with self.lock:
-            if self.command_button is None:
-                return
-            while True:
-                if cancel_check is not None:
-                    cancel_check()
-                self.receive_native_commands()
-                if not self.command_button.pending:
-                    return
-                # The parser retains the first byte's original 250 ms group
-                # deadline. Polling never starts a new group or extends it.
-                time.sleep(0.0005)
-
     def _native_arm_allowed(self):
         if not self.protect_native_hold:
             return True
-        # Observe real bytes again at every write. This remains bounded
-        # observation rather than atomic bus arbitration.
-        self.receive_native_commands()
+        try:
+            # Observe only real bytes already received. A board command can
+            # arrive after query() returns; inspect it again at each write.
+            # This is bounded observation, not atomic bus arbitration.
+            deadline, remaining = self.clock() + self.timeout, 4096
+            self.command_button.update()
+            while self.uart.in_waiting:
+                if remaining <= 0 or self.clock() >= deadline:
+                    raise LeaderGap("Native button input did not drain before Leader output")
+                received = self.uart.read(min(remaining, self.uart.in_waiting))
+                if not received:
+                    raise LeaderGap("Native button input did not drain before Leader output")
+                remaining -= len(received)
+                self.command_button.feed(received)
+            if self.clock() >= deadline:
+                raise LeaderGap("Native button input did not drain before Leader output")
+            self.command_button.update()
+        except Exception as exc:
+            self._forget_native_arm()
+            if self.fault is None:
+                self.fault = str(exc)
+            raise
         self._native_confirmed_takeover()
         allowed = (
             not self.command_button.pending

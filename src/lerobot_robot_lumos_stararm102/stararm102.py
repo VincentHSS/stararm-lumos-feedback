@@ -149,7 +149,7 @@ class StarArm102(Teleoperator):
                 # Initial detection may keep listening for a complete new
                 # press. An active session treats this exception as fatal.
                 continue
-            if button.verified and not button.pending:
+            if button.verified:
                 self._check_connection_cancelled()
                 return button
             if self.connection_cancel is not None:

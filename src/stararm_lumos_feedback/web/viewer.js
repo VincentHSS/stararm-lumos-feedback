@@ -6,55 +6,6 @@ const V = (a = [0, 0, 0]) => new THREE.Vector3(...a);
 const finiteSix = q => Array.isArray(q) && q.length === 6 && q.every(Number.isFinite);
 const metal = color => new THREE.MeshStandardMaterial({ color, metalness: .58, roughness: .34 });
 const Y = V([0, 1, 0]);
-const clockMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
-
-// Presentation only. Interpolate between received measurements with one poll
-// of delay; never predict a future motor position or wrap a bounded joint.
-export class PoseTimeline {
-  constructor(delayMs = 200, maxGapMs = 700) {
-    this.delayMs = delayMs;
-    this.maxGapMs = maxGapMs;
-    this.samples = [];
-  }
-
-  clear() { this.samples.length = 0; }
-
-  push(q, opening, time) {
-    const previous = this.samples.at(-1);
-    if (!finiteSix(q) || !Number.isFinite(opening) || !Number.isFinite(time) ||
-        previous && time <= previous.time) return false;
-    if (previous && time - previous.time > this.maxGapMs) this.clear();
-    this.samples.push({ q: [...q], opening, time });
-    // Enough history for a delayed frame, without retaining session telemetry.
-    while (this.samples.length > 6) this.samples.shift();
-    return true;
-  }
-
-  sample(now) {
-    if (!this.samples.length) return null;
-    const time = now - this.delayMs, last = this.samples.at(-1);
-    let left = this.samples[0];
-    if (time <= left.time) return { q: [...left.q], opening: left.opening };
-    for (const right of this.samples.slice(1)) {
-      if (time <= right.time) {
-        const amount = Math.max(0, Math.min(1, (time - left.time) / (right.time - left.time)));
-        return {
-          q: left.q.map((value, index) => value + (right.q[index] - value) * amount),
-          opening: left.opening + (right.opening - left.opening) * amount,
-        };
-      }
-      left = right;
-    }
-    return { q: [...last.q], opening: last.opening };
-  }
-
-  pending(now) {
-    if (this.samples.length < 2) return false;
-    const time = now - this.delayMs, pose = this.sample(now);
-    return this.samples.some(sample => sample.time > time &&
-      (sample.opening !== pose.opening || sample.q.some((value, index) => value !== pose.q[index])));
-  }
-}
 
 function origin(object, value = {}) {
   object.position.copy(V(value.xyz));
@@ -129,26 +80,24 @@ export class LumosViewer {
     this.realMeshModel = model.geometry_source === "urdf_meshes";
     this.meshExpected = (model.links ?? []).reduce((total, link) => total + (link.visuals ?? []).filter(visual => visual.geometry?.type === "mesh").length, 0);
     this.interacted = false;
-    this.poseTimeline = new PoseTimeline();
-    this.poseLive = false;
     this.azimuth = .95;
     this.elevation = .42;
     this.target = new THREE.Vector3(0, 0, .3);
     this.distance = 1.4;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xf5f8fc);
+    this.scene.background = new THREE.Color(0x0a1823);
     this.camera = new THREE.PerspectiveCamera(38, 1, .005, 50);
     this.camera.up.set(0, 0, 1);
     this.robot = new THREE.Group();
     this.scene.add(this.robot);
     this.materials = {
-      teal: metal(0x376bd3), dark: metal(0x293849), silver: metal(0xbdcbd1),
-      black: metal(0x182534), accent: metal(0x6c9df4), pad: metal(0x536274),
+      teal: metal(0x32c7b5), dark: metal(0x29444f), silver: metal(0xbdcbd1),
+      black: metal(0x182b34), accent: metal(0x7be5d6), pad: metal(0x536872),
     };
     this.available = false;
     try {
-      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "low-power" });
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 1.35;
@@ -206,7 +155,7 @@ export class LumosViewer {
   }
 
   buildEnvironment() {
-    this.scene.add(new THREE.HemisphereLight(0xf2f7ff, 0x687586, 2.8));
+    this.scene.add(new THREE.HemisphereLight(0xd9ffff, 0x324551, 2.8));
     const key = new THREE.DirectionalLight(0xffffff, 3.4);
     key.position.set(1.4, -1.3, 2.4);
     key.castShadow = true;
@@ -214,20 +163,20 @@ export class LumosViewer {
     Object.assign(key.shadow.camera, { left: -1, right: 1, top: 1, bottom: -1, near: .1, far: 6 });
     key.shadow.bias = -.0003;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0xb5cfff, 1.5);
+    const rim = new THREE.DirectionalLight(0x74dace, 1.5);
     rim.position.set(-1.5, 1.5, 1);
     this.scene.add(rim);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshStandardMaterial({
-      color: 0xeaf0f8, roughness: .92, metalness: .05,
+      color: 0x102732, roughness: .92, metalness: .1,
     }));
     floor.position.z = -.045;
     floor.receiveShadow = true;
     this.scene.add(floor);
-    const grid = new THREE.GridHelper(2, 40, 0xa5b7d1, 0xd3ddeb);
+    const grid = new THREE.GridHelper(2, 40, 0x42616a, 0x24434d);
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -.044;
     grid.material.transparent = true;
-    grid.material.opacity = .6;
+    grid.material.opacity = .65;
     this.scene.add(grid);
     const axes = new THREE.AxesHelper(.1);
     axes.position.set(.11, -.11, -.042);
@@ -390,14 +339,14 @@ export class LumosViewer {
     canvas.width = 160; canvas.height = 64;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.fillStyle = "rgba(255,255,255,.94)";
+    context.fillStyle = "rgba(8,24,32,.86)";
     context.beginPath();
     context.roundRect(2, 5, 156, 54, 15);
     context.fill();
-    context.strokeStyle = "rgba(70,111,182,.35)";
+    context.strokeStyle = "rgba(112,227,211,.65)";
     context.lineWidth = 2;
     context.stroke();
-    context.fillStyle = "#233f6c";
+    context.fillStyle = "#d9fff8";
     context.font = "600 32px system-ui, sans-serif";
     context.textAlign = "center"; context.textBaseline = "middle";
     context.fillText(text, 80, 33);
@@ -470,24 +419,16 @@ export class LumosViewer {
     this.targetRobot.updateMatrixWorld(true);
   }
 
-  update(q, opening, targetUrdfRad6 = null, presentation = {}) {
+  update(q, opening, targetUrdfRad6 = null) {
     if (!finiteSix(q)) q = finiteSix(this.model.preview_q) ? this.model.preview_q : [0, 0, 0, 0, 0, 0];
     const fraction = Number.isFinite(opening) ? Math.max(0, Math.min(1, opening)) : .6;
     const target = finiteSix(targetUrdfRad6) ? targetUrdfRad6 : null;
     const targetUnchanged = target === null ? !this.lastTargetQ : this.lastTargetQ && target.every((value, i) => value === this.lastTargetQ[i]);
-    const poseUnchanged = this.lastQ && q.every((value, i) => value === this.lastQ[i]) && fraction === this.lastOpening;
-    const live = presentation.live === true;
-    const wasLive = this.poseLive;
-    this.poseLive = live;
-    if (live) this.poseTimeline.push(q, fraction, presentation.sampleTime ?? clockMs());
-    else this.poseTimeline.clear();
-    if (poseUnchanged && targetUnchanged && live === wasLive && !this.poseTimeline.pending(clockMs())) return;
+    if (this.lastQ && q.every((value, i) => value === this.lastQ[i]) && fraction === this.lastOpening && targetUnchanged) return;
     this.lastQ = [...q];
     this.lastTargetQ = target ? [...target] : null;
     this.lastOpening = fraction;
-    // References and stale/last poses must stay exact. The first live sample
-    // also snaps directly, so a reference is never animated as a measurement.
-    if (!live || !wasLive) this.applyPose(this.joints, this.fingers, q, fraction);
+    this.applyPose(this.joints, this.fingers, q, fraction);
     this.updateTargetPose();
     this.robot.updateMatrixWorld(true);
     this.render();
@@ -570,20 +511,8 @@ export class LumosViewer {
   render() {
     if (!this.camera || !this.robot || this.framePending) return;
     this.framePending = true;
-    const draw = frameTime => {
+    const draw = () => {
       this.framePending = false;
-      const now = Number.isFinite(frameTime) ? frameTime : clockMs();
-      // Exact STL surfaces are expensive in the software fallback. Keep its
-      // work bounded instead of filling the main thread with 60 CPU frames.
-      if (typeof requestAnimationFrame === "function" && !this.renderer && this.poseLive && now < (this.nextCpuFrameAt ?? 0) && this.poseTimeline.pending(now)) {
-        this.render();
-        return;
-      }
-      const started = clockMs();
-      if (this.poseLive) {
-        const pose = this.poseTimeline.sample(now);
-        if (pose) this.applyPose(this.joints, this.fingers, pose.q, pose.opening);
-      }
       this.cameraPosition();
       if (this.renderer) {
         try { this.renderer.render(this.scene, this.camera); }
@@ -593,10 +522,6 @@ export class LumosViewer {
           this.renderFallback();
         }
       } else this.renderFallback();
-      if (!this.renderer) this.nextCpuFrameAt = now + Math.max(1000 / 24, (clockMs() - started) * 1.4);
-      // Independent from the hardware loop. Stop once the last received pose
-      // is reached; a missing packet can never generate continuing motion.
-      if (typeof requestAnimationFrame === "function" && this.poseLive && this.poseTimeline.pending(now)) this.render();
     };
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(draw);
     else draw();
@@ -733,7 +658,7 @@ export class LumosViewer {
     const width = this.canvas.width, height = this.canvas.height;
     const triangles = this.cpuTriangles(width, height);
     const background = context.createLinearGradient(0, 0, 0, height);
-    background.addColorStop(0, "#f8faff"); background.addColorStop(1, "#eaf0f8");
+    background.addColorStop(0, "#122936"); background.addColorStop(1, "#07141e");
     context.fillStyle = background; context.fillRect(0, 0, width, height);
     const project = point => {
       const value = point.clone().project(this.camera);
@@ -746,7 +671,7 @@ export class LumosViewer {
     };
     context.lineWidth = 1;
     for (let i = -20; i <= 20; i++) {
-      context.strokeStyle = i % 5 === 0 ? "#b6c5db" : "#d6e0ee";
+      context.strokeStyle = i % 5 === 0 ? "#2c4d59" : "#1b3844";
       line(V([i * .05, -1, -.043]), V([i * .05, 1, -.043]));
       line(V([-1, i * .05, -.043]), V([1, i * .05, -.043]));
     }
@@ -783,16 +708,16 @@ export class LumosViewer {
       }
       placedLabels.push({x, y, halfWidth, halfHeight});
       if (Math.hypot(x - anchorX, y - anchorY) > 3) {
-        context.strokeStyle = "rgba(52,97,171,.4)"; context.lineWidth = 1;
+        context.strokeStyle = "rgba(115,224,207,.45)"; context.lineWidth = 1;
         context.beginPath(); context.moveTo(anchorX, anchorY); context.lineTo(x, y); context.stroke();
       }
-      context.fillStyle = "rgba(255,255,255,.94)";
-      context.strokeStyle = "rgba(70,111,182,.35)";
+      context.fillStyle = "rgba(7,23,31,.9)";
+      context.strokeStyle = "rgba(115,224,207,.65)";
       context.lineWidth = 1;
       context.beginPath();
       if (context.roundRect) context.roundRect(x - textWidth / 2 - 10, y - font * .7, textWidth + 20, font * 1.4, 7);
       else context.rect(x - textWidth / 2 - 10, y - font * .7, textWidth + 20, font * 1.4);
-      context.fill(); context.stroke(); context.fillStyle = "#233f6c"; context.fillText(label.text, x, y);
+      context.fill(); context.stroke(); context.fillStyle = "#d8fff5"; context.fillText(label.text, x, y);
     }
     this.cpuTriangleCount = triangles.length;
   }

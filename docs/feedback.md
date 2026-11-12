@@ -1,19 +1,14 @@
-# StarArm → Lumos force feedback · 0.6.31
-
-Version 0.6.26 adds seven-axis baseline admission diagnostics, including normalized gripper opening. The dashboard shows each blocking axis's target, sent and measured values with errors and tolerances while waiting for the first baseline. Stopped, stale or frozen-baseline sessions do not show this as a live blocker. This is diagnostic only; thresholds, admission ordering and damping policy are unchanged.
-
-Version 0.6.25 adds a white, black and blue interface, local Lucide icons, button feedback, presence and disclosure transitions, and morphing language changes. Tables update changed values without replacing rows; language changes preserve unapplied cap edits. The viewer interpolates received poses with approximately 200 ms of display buffering and never extrapolates. Stale or stopped state immediately freezes to the latest measured pose and retains its state label; stationary scenes stop continuous rendering. Actual STL geometry, dynamics, calibration, control rate and protections are unchanged. Smoother display does not establish tracking or force-feedback performance. Reduced-motion preferences disable decorative animation.
+# StarArm → Lumos force feedback · 0.6.24
 
 Version 0.6.24 applies each bound axis `limit_margin` consistently to measured positions before and after startup, matching CAN checks so half an encoder step near zero is not rejected by a later strict measurement check. Raw measurements and baseline anchors are preserved. Initial position commands and relative-start references stay clipped to the original limits; Leader target limits are unchanged. Measurements beyond the existing margin still fail. Recalibration is not required; changed source requires normal rebinding.
 
-Following speed, maximum target step, scheduling rate, status rate and Leader
-One Euro filter settings come from the selected session configuration. The page
-reports measured loop frequency and overruns; a scheduling target is not a
-guaranteed achieved rate. CAN/serial checks and control remain per cycle.
-Per-axis tracking shows mapped, joint-clipped, sent and measured positions,
-separating calibration/limit clips from rate lag and servo error. Axes are
-rate-limited independently and need not arrive simultaneously. Calibration and
-manufacturer limits are unchanged.
+Version 0.6.24 uses speed, target-step, control-rate and Leader One Euro filter
+settings from the bound session. The page reports achieved frequency and overruns;
+the scheduling target is not a guaranteed achieved rate. CAN/serial checks and
+control remain per cycle. Per-axis tracking shows mapped, joint-clipped, sent and
+measured positions, separating calibration/limit clips from rate lag and servo
+error. Axes are rate-limited independently and need not arrive simultaneously.
+Calibration and manufacturer limits are unchanged.
 
 The explicit `experiment` mode requires a bound local authorization, an actual
 unloaded declaration and native-button event reception. Output remains zero
@@ -22,92 +17,28 @@ absolute residual P99 plus four torque LSBs is frozen as a minimum deadzone;
 no fitted mean is removed and contact loads are never learned during output.
 Whole-arm q/v/estimated-a dynamics still supplies J1-J6 model torques, with
 independent gripper torque. A filtered acceleration outside the original model
-domain is retained and inhibits damping until valid warmup. Confirm mass coverage
-for the actual assembly. When the selected whole-arm URDF already includes
-TypeLJ, record
+domain is retained and inhibits damping until valid warmup. When the whole-arm
+URDF is confirmed to include TypeLJ, record
 `mass_coverage: urdf_includes_typelj` and `payload: null` to avoid adding its mass
 twice. An explicit experimental contract with `max_mw: null` removes the additional
 experimental ceiling. Each effective cap is the smaller of the webpage common
 and axis caps, both defaulting to 1200 mW. The common cap is adjustable from
 400–1500 mW and each axis from 0–1500 mW; 0 disables that axis. With confirmed
 model coverage and `max_mw: null`, each axis uses its configured
-`profile.policy[].rise_mw_s`. Set these rates from the reviewed response of the
-actual hardware; source releases do not include machine-specific tuning. Existing explicit 1–200 mW additional-cap
+`profile.policy[].rise_mw_s`, reviewed for the actual hardware. Existing explicit 1–200 mW additional-cap
 contracts retain the smaller of their configured rise rate and 100 mW/s. The page
 shows each axis's effective rise rate. All software and automatic HOLD requests
 remain disabled. mW is a Leader request, not measured mechanical resistance or a
 safety rating.
 
-Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
+The initial unloaded baseline is collected only after a complete real button release, at least one complete successful following write, the end of target-rate catch-up and measured proximity to the target. Both the target and measured pose must remain stationary for at least two seconds. Button waiting, supported startup poses and initial approach cannot qualify. Arrival uses the original joint-limit-clipped target without enlarging travel. Once frozen, the baseline is never relearned on button changes or new external loads. This gate corrects startup sampling timing; a single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
-When the current pose is truly unloaded and has no external contact, use the dashboard's
-**Recapture unloaded baseline** action without exiting motor control or restarting
-following. First set all seven ordinary damping axis caps to 0 and apply them. Wait
-for the active experimental session to receive a complete real button release,
-then check the explicit unloaded/no-contact declaration and submit. The server
-rechecks the running mode, effective caps, native release state and request fields;
-the only accepted body for `POST /api/experimental-baseline` is
-`{"unloaded_confirmed": true}`. The control loop checks conditions again before
-clearing baseline collection and local-reference state, then collects under the
-existing target-arrival and at-least-two-second continuous stationary gates. The
-dashboard reports queued, collecting, frozen or rejected states.
-
-Each recapture requires a new explicit unloaded declaration. Changes in pose,
-motion, button state or contact never trigger automatic learning. Following
-continues without disabling motors or replaying button commands; communication
-and other protections can still stop the session normally. Damping stays zero
-during collection, and caps remain at 0 afterward with no automatic restoration.
-Check the unloaded state before separately restoring the desired caps. Never
-recapture with an object in the gripper, an external load or contact with a table:
-that would classify the real load as baseline error. The replacement remains a
-single-pose reference, without full-range unloaded separation or hardware-feel
-validation.
-
-The optional engineering setting
-`commissioning.experimental_damping.local_reference_enabled` defaults to
-`false` and requires confirmed assembly mass coverage. It adds a local,
-bidirectional residual check for J1–J6: a load can reduce the magnitude of an
-existing signed model error, so the original absolute-residual threshold may miss
-it. The whole-arm dynamics, raw residual and original absolute-residual channel
-remain in place. The local check uses each axis's signed unloaded residual
-minimum and maximum from one continuous initial stationary window, never a
-bounding interval accumulated across different windows. It independently filters
-the distance outside that interval, then subtracts the larger of the configured
-`policy.deadzone_nm` and four torque LSBs, plus the current model torque's distance
-outside its frozen model-torque interval, before confirming the remaining excess.
-The local channel therefore preserves the configured fixed deadzone. Each axis
-uses the larger eligible excess from the original
-and local channels, never their sum, with its existing full-output scale, power
-caps and rise/fall rates. It does not remove a residual mean or reproduce the
-direction of an external force on the Leader. The gripper has no local channel.
-
-The local channel requires all seven measured positions to remain near their
-frozen reference and all seven axes, including the raw gripper motor, to be
-stationary. Each arm-axis radius is the smaller of 2° and the session's
-`robot.max_target_step_deg` (default 2°); the gripper-opening radius is 0.02.
-These radii are engineering assumptions around a sampled pose, not evidence of
-unloaded coverage throughout that neighborhood. The model-torque allowance
-reduces, but cannot establish the absence of, local model error. Leaving this
-scope clears the local filter and confirmation state immediately; the original
-absolute-residual channel continues under its existing guards. The frozen
-reference is never automatically extended or relearned while output is active;
-only the explicit zero-cap, declared-unloaded recapture above replaces it. The dashboard
-reports whether the optional channel is enabled, currently eligible, or outside
-its local conditions, and which arm axes currently use it. This addresses one
-source of missed loads near a sampled pose; it is not a full-range force-feedback
-validation or a claim of verified hardware feel. Changing this option or policy
-requires a normal new binding. Web controls remain limited to power caps and explicit unloaded-baseline recapture;
-internal policy parameters remain read only.
-
-For the original absolute-residual channel, a sustained static load on J4 alone
-produces its corresponding damping once that axis's filtered residual magnitude
-exceeds the current deadzone and satisfies load confirmation; other joints do
-not need to move. The pure ramp duration is the
-requested power change divided by the configured rise rate; filtering and
-confirmation add separate time. The rise-rate correction removes the extra
-experimental limiter where the contract permits it, preserving the original
-absolute channel's residual, deadzone, full-output torque scale and final
-intensity mapping. A small eligible excess may still produce a small request. Software
+A sustained static load on J4 alone produces its corresponding damping once that
+axis's filtered residual exceeds the current deadzone and satisfies load
+confirmation; other joints do not need to move. Power buildup depends on the
+configured rise rate, filtering and confirmation time. The
+residual, deadzone, full-output torque scale and final intensity mapping are
+unchanged, so a small residual may still produce a small request. Software
 validation does not establish acceptance of physical damping feel.
 
 A complete real six-axis native release event is required for experimental
@@ -116,14 +47,13 @@ suppress software commands without replaying native hold. Queued events are
 checked before motion/force writes, but no atomic exclusion with the board is
 guaranteed. Residual software output after an incomplete transition is reported
 as unknown, never as confirmed released. Exiting control can remove Follower
-support. Model coverage, dynamic thresholds and hardware performance must be
-reviewed for each assembly. Engineering profiles keep `force_authorized=false`
-and cannot use formal `run`; an assembly declaration does not establish dynamic
-validation. The stationary baseline does not cover every pose or moving condition;
+support. Experimental mode requires a separate model-coverage confirmation; dynamic
+thresholds and hardware performance still await acceptance. Engineering profiles
+keep force_authorized false and `run` blocked. A coverage declaration does not
+establish dynamic validation. The stationary baseline does not cover every pose or moving condition;
 residuals include friction/model error and are not accurate
 external-force measurements or formal force-feedback acceptance. Web controls
-remain limited to common/per-axis power caps and explicit unloaded-baseline recapture;
-internal policy stays read only.
+remain limited to common/per-axis power caps.
 
 
 **English** / [简体中文](feedback.zh.md)
@@ -169,7 +99,7 @@ joint limits. Engineering current-relative startup captures each arm's origin;
 it preserves all joint limits and does not require returning to calibrated home.
 
 The optional session field `robot.startup_pair_tolerance_rad` independently sets
-the pair threshold in home mode (in radians). Omission or
+the pair threshold in home mode (20° = `0.3490658503988659` rad). Omission or
 `null` preserves each axis's prior value. Individual home-distance conditions,
 joint limits and the current-pose cap of at most 2° remain unchanged. This setting
 requires a new normal binding, not recalibration.
@@ -215,14 +145,15 @@ SDK or constructing an arm, and rejects prior native loads, partial/changed
 artifacts and stale bindings. The original mismatch gate still blocks motion
 without this valid correction. With it installed and rebound, `follow/monitor`
 can pass that gate; startup, communication and motion guards remain active.
-Physical following, holding and damping remain unvalidated. Model coverage must be confirmed for each assembly; formal `run` remains blocked pending dynamic-threshold,
+Physical following, holding and damping remain unvalidated. Model coverage is now
+subject to separate confirmation; formal `run` remains blocked pending dynamic-threshold,
 measured-response and native-HD arbitration acceptance. See the [SDK review](sdk-startup-review.md) for exact evidence.
 
 Gitee and GitHub currently share commit `040412542c0b6b6fd2bb6dd652c0de6c666631be`.
 The [Gitee URDF](https://gitee.com/lu-ming-robotics---shenzhen--g/startouch_sdk/blob/040412542c0b6b6fd2bb6dd652c0de6c666631be/src/config/FastTouchV2.SLDASM.urdf#L337)
 and [YAML](https://gitee.com/lu-ming-robotics---shenzhen--g/startouch_sdk/blob/040412542c0b6b6fd2bb6dd652c0de6c666631be/src/config/robot_kinematics.yaml#L6)
-provide no extra TypeLJ inertial evidence. Record the coverage decision for the actual assembly with its
-supporting evidence. Neither the
+provide no extra TypeLJ inertial evidence. Coverage must instead be verified for
+the actual installed assembly and recorded explicitly in its profile. Neither the
 commented `0.126` nor V3 viewer mass is used as an additional TypeLJ payload. Source
 delivery excludes the compiled correction, its generated manifest and local
 parameters, calibration, bindings or runtime data.
@@ -428,17 +359,17 @@ raw seeding with zero target velocity and the two-second stability check. Drift
 never changes the fixed offset. Cleanup clears it from memory; calibration,
 settings, logs and parameter history never receive it.
 
-An inverse target can fall outside a Leader joint's calibrated range even when
-the Follower pose passes its own checks. `current_aligned` rejects that pose;
-relative startup provides an explicit alternative while preserving the original
-calibration. Default home and absolute current alignment remain available.
+A Follower pose may map outside the calibrated Leader range, so absolute current
+alignment correctly rejects it. Relative startup provides an explicit alternative
+while keeping the original calibration. Default home and absolute current alignment
+remain available.
 
 These are engineering startup procedures, not atomic hardware holds. The SDK
 enables motors and starts its own control loop inside construction, before the
 fixed target can be published. Keep stable support through startup; neither a
 successful software test nor target acceptance establishes that releasing support
 will hold J4. Physical current-aligned/relative startup and following remain unvalidated.
-Confirm model coverage for the actual assembly. Formal force output still awaits
+Model coverage requires separate confirmation. Formal force output still awaits
 measured-response and native-HD arbitration acceptance.
 See the [pinned SDK startup review](sdk-startup-review.md) for the static evidence
 and its limits.
@@ -461,8 +392,6 @@ freezes new targets; failure to complete a valid group within 0.25 seconds is
 fatal. No-board mode skips board detection, retaining joint missing-frame checks.
 It cannot prevent a physically connected native board from controlling Leader
 resistance. None of these changes modifies the dynamics observer.
-
-Version 0.6.29 keeps RX-only native command reception running during preflight and blocking SDK initialization, under the same UART lock. Pending groups must finish within their original deadline before initialization. The temporary receiver is stopped and joined before UART ownership returns to the control loop. Detection keeps waiting if a new partial group follows a complete group in the same read. This sends no button commands, clears no receive buffer and does not extend the 250 ms deadline.
 
 The `monitor` baseline collector accepts only genuinely new seven-axis frames in
 continuous stationary windows. It reports absolute residual maximum, p95/p99,
@@ -550,18 +479,21 @@ genuine CAN timestamps remain the source of confirmation timing.
 Engineering profiles may additionally record a confirmed closed endpoint in
 `commissioning.gripper_closed_observation`:
 
-`gripper_closed_observation` contains exactly
-`operator_confirmed_closed: true` and `raw_position_code`. Fill the latter with
-the 16-bit integer observed on the actual fully closed gripper; source releases
-do not supply a measured endpoint or a ready-to-use observation profile.
+```json
+{
+  "operator_confirmed_closed": true,
+  "raw_position_code": 32768
+}
+```
 
 Record this only after confirming the physical gripper is fully closed and
 observing stable, genuinely new raw motor frames. The exact nested keys are
-required: confirmation must be `true`, and the raw code a 16-bit integer decoded
-with axis 7 `p_max`. The resulting positive closed reference must be at most
-16 position LSBs above zero. This is a software commissioning constraint, not a
-manufacturer accuracy claim. The closed upper guard is that observed reference
-plus the existing motor-position margin; the open lower guard remains unchanged.
+required: confirmation must be `true`, and the raw code a 16-bit integer. It is
+decoded with axis 7 `p_max`; the resulting positive reference must be at most
+16 position LSBs above zero. This software commissioning limit is not a
+manufacturer accuracy specification. The JSON uses synthetic code 32768 only to illustrate the schema; do not use it
+as a physical closed endpoint. The upper guard uses the actual observed reference
+plus the existing four-LSB margin; the open lower guard is unchanged.
 The observation does not shift telemetry, global offsets, SDK commands, the
 nonlinear converter or existing paired calibration. It is part of the bound
 profile and requires ordinary rebinding after changes. Only engineering
@@ -679,9 +611,9 @@ different gravity directions, explicit payloads and invalid models. Runtime test
 use synthetic CAN/serial, fault injection and HTTP. Adapter-boundary tests execute
 the production mapping, filtering, HD and target clamps with stubbed LeRobot base
 classes/device constructors; they are not full framework integration tests.
-Framework integration tests use real LeRobot with simulated hardware. See
-[VALIDATION.md](../VALIDATION.md) for software-validation scope and current results;
-these tests do not establish physical following or force-output acceptance.
+Framework integration tests also use simulated hardware, without physical following
+or force output. See [VALIDATION.md](../VALIDATION.md) and the restoration commit
+for the current verification results.
 
 Baselines: teleoperation `454979c7c8b9d5ced15f1964a2d588acf531ae3f` (0.2.0), SDK
 above, original feedback `c4ce25e` (0.6.2), second B601 subtree `604d60b` (0.7.2).
@@ -690,20 +622,3 @@ repository nor the SDK was modified. Source tests do not validate physical
 transparency, load stability, communication reliability or damping feel. Complete
 offline validation → basic following → monitoring → physical damping/HOLD checks
 on the actual configured hardware before calling the adaptation commissioned.
-
-## Optional TypeLJ following gains
-
-The local session's robot configuration may set both `gripper_follow_kp` and
-`gripper_follow_kd`. Both default to `null`, preserving the original
-`setGripperPosition` interface. Explicit values must be finite within the
-reviewed SDK ranges: kp 0.1–20 and kd 0.1–1. The bound SDK YAML must explicitly
-select TypeLJ and contain valid `default_kp`/`default_kd`.
-
-This opt-in path sends normalized physical opening × 0.08 metres through
-`setGripperDistance`; it preserves normalized targets and baseline comparisons.
-Startup still uses the unchanged YAML defaults. Each endpoint's 10% opening
-band smoothly blends following gains back to those defaults; exact open/closed
-commands use the default gains. It changes neither motion limits nor physical
-motor-range guards, and does not certify unloaded/load separation. Review values
-for the actual assembly, regenerate the normal binding after session changes,
-and verify physically before adopting them. These gains are not web-editable.

@@ -1,15 +1,14 @@
-# 0.6.29 hardware startup
+# 0.6.24 hardware startup
 
 Version 0.6.24 applies each bound axis `limit_margin` consistently to measured positions before and after startup, matching CAN checks so half an encoder step near zero is not rejected by a later strict measurement check. Raw measurements and baseline anchors are preserved. Initial position commands and relative-start references stay clipped to the original limits; Leader target limits are unchanged. Measurements beyond the existing margin still fail. Recalibration is not required; changed source requires normal rebinding.
 
-Following speed, maximum target step, scheduling rate, status rate and Leader
-One Euro filter settings come from the selected session configuration. The page
-reports measured loop frequency and overruns; a scheduling target is not a
-guaranteed achieved rate. CAN/serial checks and control remain per cycle.
-Per-axis tracking shows mapped, joint-clipped, sent and measured positions,
-separating calibration/limit clips from rate lag and servo error. Axes are
-rate-limited independently and need not arrive simultaneously. Calibration and
-manufacturer limits are unchanged.
+Version 0.6.24 uses speed, target-step, control-rate and Leader One Euro filter
+settings from the bound session. The page reports achieved frequency and overruns;
+the scheduling target is not a guaranteed achieved rate. CAN/serial checks and
+control remain per cycle. Per-axis tracking shows mapped, joint-clipped, sent and
+measured positions, separating calibration/limit clips from rate lag and servo
+error. Axes are rate-limited independently and need not arrive simultaneously.
+Calibration and manufacturer limits are unchanged.
 
 The explicit `experiment` mode requires a bound local authorization, an actual
 unloaded declaration and native-button event reception. Output remains zero
@@ -18,30 +17,27 @@ absolute residual P99 plus four torque LSBs is frozen as a minimum deadzone;
 no fitted mean is removed and contact loads are never learned during output.
 Whole-arm q/v/estimated-a dynamics still supplies J1-J6 model torques, with
 independent gripper torque. A filtered acceleration outside the original model
-domain is retained and inhibits damping until valid warmup. Confirm mass coverage
-for the actual assembly. When the selected whole-arm URDF already includes
-TypeLJ, record
+domain is retained and inhibits damping until valid warmup. When the whole-arm
+URDF is confirmed to include TypeLJ, record
 `mass_coverage: urdf_includes_typelj` and `payload: null` to avoid adding its mass
 twice. An explicit experimental contract with `max_mw: null` removes the additional
 experimental ceiling. Each effective cap is the smaller of the webpage common
 and axis caps, both defaulting to 1200 mW. The common cap is adjustable from
 400–1500 mW and each axis from 0–1500 mW; 0 disables that axis. With confirmed
 model coverage and `max_mw: null`, each axis uses its configured
-`profile.policy[].rise_mw_s`. Set these rates from the reviewed response of the
-actual hardware; source releases do not include machine-specific tuning. Existing explicit 1–200 mW additional-cap
+`profile.policy[].rise_mw_s`, reviewed for the actual hardware. Existing explicit 1–200 mW additional-cap
 contracts retain the smaller of their configured rise rate and 100 mW/s. The page
 shows each axis's effective rise rate. All software and automatic HOLD requests
 remain disabled. mW is a Leader request, not measured mechanical resistance or a
 safety rating.
 
-Initial unloaded collection requires a complete real button release and at least one complete successful following write. Arm and gripper target catch-up and measured arrival are admitted separately; all seven measured axes, including the raw gripper motor, must still remain stationary for at least two seconds. When the first group qualifies, every group ready in that cycle freezes and the initial collection window closes. Unready groups keep zero damping for this session and cannot be learned later during output. The dashboard reports arm and gripper status separately; gripper arrival error no longer blocks a qualified arm. Button waiting, supported startup poses and each group’s initial approach cannot qualify that group. Arrival tolerances and physical limits are unchanged. Button changes and external loads never relearn a frozen baseline. A single-pose baseline still cannot establish unloaded separation over the entire motion range.
+The initial unloaded baseline is collected only after a complete real button release, at least one complete successful following write, the end of target-rate catch-up and measured proximity to the target. Both the target and measured pose must remain stationary for at least two seconds. Button waiting, supported startup poses and initial approach cannot qualify. Arrival uses the original joint-limit-clipped target without enlarging travel. Once frozen, the baseline is never relearned on button changes or new external loads. This gate corrects startup sampling timing; a single-pose baseline still cannot establish unloaded separation over the entire motion range.
 
 A sustained static load on J4 alone produces its corresponding damping once that
 axis's filtered residual exceeds the current deadzone and satisfies load
-confirmation; other joints do not need to move. The pure ramp duration is the
-requested power change divided by the configured rise rate; filtering and
-confirmation add separate time. The rise-rate correction removes the extra
-experimental limiter where the contract permits it. The residual, deadzone, full-output torque scale and final intensity mapping are
+confirmation; other joints do not need to move. Power buildup depends on the
+configured rise rate, filtering and confirmation time. The
+residual, deadzone, full-output torque scale and final intensity mapping are
 unchanged, so a small residual may still produce a small request. Software
 validation does not establish acceptance of physical damping feel.
 
@@ -51,10 +47,10 @@ suppress software commands without replaying native hold. Queued events are
 checked before motion/force writes, but no atomic exclusion with the board is
 guaranteed. Residual software output after an incomplete transition is reported
 as unknown, never as confirmed released. Exiting control can remove Follower
-support. Model coverage, dynamic thresholds and hardware performance must be
-reviewed for each assembly. Engineering profiles keep `force_authorized=false`
-and cannot use formal `run`; an assembly declaration does not establish dynamic
-validation. The stationary baseline does not cover every pose or moving condition;
+support. Experimental mode requires a separate model-coverage confirmation; dynamic
+thresholds and hardware performance still await acceptance. Engineering profiles
+keep force_authorized false and `run` blocked. A coverage declaration does not
+establish dynamic validation. The stationary baseline does not cover every pose or moving condition;
 residuals include friction/model error and are not accurate
 external-force measurements or formal force-feedback acceptance. Web controls
 remain limited to common/per-axis power caps.
@@ -76,31 +72,27 @@ mode. Monitoring, force output, non-engineering profiles and gripper checks reta
 their original acceleration checks. All other motion and communication guards
 remain enforced. No threshold enlargement or calibration change is applied.
 
-After installing the reviewed 0.6.13 source-based native velocity-range
-correction and regenerating the binding, basic following and following with
-monitoring can pass their chosen startup admission. Version 0.6.16 adds the web option “Follow Leader directly
-(rate-limited approach)”: neither arm must align or return home, and the gripper
-need not be closed beforehand. The SDK may automatically close it. Fresh measured
-Follower positions seed the existing rate limiter, which approaches the absolute
-Leader target under original joint, speed and step limits without recalibration.
-Communication, faults, temperatures, measured limits, SDK/CAN agreement, origin
-stability and SDK J2 construction conditions remain checked. Brief motion before
-the first seed remains possible. Confirm model coverage for the actual assembly;
-formal force feedback still requires acceptance of measured tuning and response.
+After applying and normally binding the 0.6.13 source-based native velocity-range
+correction, basic following and following with monitoring can pass their selected
+startup admission. Version 0.6.16 provides “Follow Leader directly (rate-limited
+approach)”: neither arm must align or return home, and the gripper need not be
+closed beforehand. SDK construction may close it. Fresh measured Follower positions
+seed the existing limiter, approaching the absolute Leader target under original
+joint, speed and step limits without recalibration. Communication, faults,
+temperatures, measured limits, SDK/CAN agreement, origin stability and SDK J2
+construction conditions remain checked. Brief motion before the first seed remains
+possible. Formal feedback still requires model-coverage, tuning and response acceptance.
 
-The older entries below explain the software changes. The original 0.6.11 range
-gate passes only with a valid reviewed correction matching the actual hardware.
+The entries below retain the SDK range checks and source-correction conditions.
 
 ## 0.6.11 history
 
-Version 0.6.11 blocks a confirmed native SDK range mismatch before enabling.
-The pinned core uses ±8 rad/s for J1–J3. On an installation whose verified RID22
-is ±10 rad/s, this mismatch affects both native command packing and feedback
-decoding. Read-only queries and the real 3D pose remain available; following and
-force modes require a valid reviewed correction matching the actual hardware.
-Do not mask a discrepancy by changing hardware ranges, Python scaling or binding
-hashes. A J1–J3 range mismatch does not explain a derived-acceleration failure on
-another axis whose hardware and native ranges already agree.
+Version 0.6.11 blocks a mismatch between native SDK ranges and verified motor
+settings before enabling, so command packing and feedback decoding cannot use
+different ranges. Read-only queries and the real 3D pose remain available. Following,
+monitoring while following and force output remain blocked until a corrected,
+reviewable core is installed. Do not mask differences by changing hardware ranges,
+Python scaling or binding hashes. See the [SDK review](sdk-startup-review.md).
 
 J1–J6 acceleration protection now retains a feasible velocity quantization interval
 across the complete sequence. Expand the previous interval by the unchanged
@@ -109,17 +101,15 @@ one-code bin, and stop on an empty intersection. This avoids a single boundary
 code toggle while rejecting a rapid sustained staircase; thresholds, elapsed time
 and per-frame allowances are not inflated. The nonlinear gripper derivative guard
 and raw acceleration estimation/filtering formulas remain unchanged. The filtered model acceleration must also remain finite and within its original configured limit; otherwise reject without resetting, clipping or committing the candidate state. Quantization false
-trips were reproduced offline; an individual hardware failure still requires its
-own analysis. Kernel receive times are not motor sampling times. Errors now include numeric
+trips were reproduced offline; quantization and receive timing still require separate investigation.
+Kernel receive times are not motor sampling times. Errors now include numeric
 velocity, interval, limit and feasible bounds. Physical holding, following and
 damping remain unvalidated.
 
 Version 0.6.10 guards the first fixed joint seed while the SDK state cache becomes
 ready. Native review confirms that the getter returns six zeros until the
 control-loop cache is valid; the constructor has no readiness barrier before
-returning. An all-zero SDK vector before the first target does not establish a
-physical zero pose. All six positions must agree with genuinely new independent
-CAN feedback within the bound tolerances.
+returning. A zero vector alone does not establish a physical zero pose.
 
 For current-pose startup only, first-seed readiness may wait at most 100 ms,
 shortened by all seven CAN age limits and the fixed preflight reference's expiry.
@@ -176,15 +166,11 @@ print(config)
 PY
 ```
 
-The pinned native core uses SDK-directory candidates when locating resources.
-Keep the final physical layout as
-`.../<version>/startouch_sdk/src/config/robot_kinematics.yaml`; a differently named
-root containing the YAML alone does not establish the required layout. Importing
-the extension and reading its GIL-patch marker do not exercise native
-configuration lookup. A missing-configuration failure at this stage occurs before
-the constructor's CAN initialization and motor enabling; read-only preflight CAN
-queries may already have run. Correcting the path does not validate physical
-holding, following or force feedback.
+A physical SDK root without the required `startouch_sdk` name may fail native
+resource lookup even when the YAML exists. Use `.../<version>/startouch_sdk` and
+check the selected resources offline before construction. Importing the extension
+or reading its GIL-patch marker does not test native configuration discovery or
+establish physical holding, following or damping performance.
 
 The page offers **With button board / No button board**. Stop the session fully
 before changing it; the choice applies to the next connection. Only the current
@@ -220,8 +206,6 @@ ends the session. Legacy monitor freshness and all joint missing-frame guards
 remain enabled. No-board mode does not detect the board, and the selector cannot
 disable a physically connected board's native control of Leader resistance.
 
-Version 0.6.29 keeps RX-only native command reception running during preflight and blocking SDK initialization, under the same UART lock. Pending groups must finish within their original deadline before initialization. The temporary receiver is stopped and joined before UART ownership returns to the control loop. Detection keeps waiting if a new partial group follows a complete group in the same read. This sends no button commands, clears no receive buffer and does not extend the 250 ms deadline.
-
 The selector does not authorize software force feedback. In follow/monitor modes,
 this software sends no Leader damping/hold commands, but a native HD board still
 changes Leader resistance directly, even when this program is not running. On
@@ -237,11 +221,11 @@ native-board action reads; it does not provide this continuous command listener.
 
 [中文](hardware.zh.md) · [Detailed configuration and feedback design](feedback.md)
 
-This version targets a paired-calibrated StarArm 102 and upright Lumos with
-TypeLJ and no additional tool. Engineering profiles support state queries,
-following, monitoring and explicitly authorized experimental damping. Review
-model coverage, tuning and hardware response for each assembly. Engineering
-profiles cannot use formal `run`; a release number does not validate hardware effects.
+This version targets the recalibrated StarArm 102 paired with upright Lumos,
+TypeLJ, and no additional tool. An appropriately configured engineering profile supports state
+queries, following, monitoring and explicitly authorized experimental damping.
+Model coverage requires separate confirmation; measured tuning and hardware effects still
+await acceptance. Formal `run` stays blocked. A release number does not validate hardware effects.
 
 ## Start the state dashboard
 
@@ -354,18 +338,18 @@ The SDK enables motors and starts its own control loop inside construction,
 before this program can publish the fixed target. The sequence is not atomic
 holding. Keep stable support: a completed check does not establish that removing
 support will hold J4. This new startup procedure has not been verified on physical
-hardware. Confirm model coverage for the actual assembly, while measured response
+hardware. Model coverage requires separate confirmation, while measured response
 and native-board arbitration still require acceptance before formal force output. The [SDK startup review](sdk-startup-review.md)
 records the pinned source and binary evidence.
 
 ### Explicit current-position relative startup for engineering follow/monitor
 
-Version 0.6.6 adds the explicit `current_relative` page choice, “Relative start at current pose (engineering)”. It is restricted to engineering `follow/monitor`. Home remains
-the default; `current_aligned` remains available. A Follower pose can pass its own
-checks while its inverse Leader target lies outside the paired calibration range.
-Absolute current alignment rejects that target. Relative startup addresses this
-case without changing the stored calibration or requiring the Leader to reach an
-unavailable absolute target.
+Version 0.6.6 adds explicit `current_relative` startup for engineering
+`follow/monitor`. Home remains the default; `current_aligned` remains available.
+A Follower pose may have an inverse absolute Leader target outside the calibrated
+range, so absolute alignment correctly rejects it. Relative startup retains the
+original calibration and uses the Leader's current in-range pose as the relative
+reference for this session.
 
 1. Rest the Follower on stable support, close TypeLJ and check the intended workspace.
    Place the Leader in a stable, usable pose within its calibrated range. The page
@@ -394,7 +378,8 @@ settings, logs or a history file.
 
 The SDK still enables inside construction before the fixed target is sent. This
 option does not provide atomic holding or establish that J4 will stay when support
-is removed. Physical relative startup and following remain unvalidated. Confirm model coverage for the actual assembly; formal force feedback still awaits measured
+is removed. Physical relative startup and following remain unvalidated. Model
+coverage requires separate confirmation; formal force feedback still awaits measured
 response and native-HD arbitration acceptance.
 
 Stop and exit control prevents subsequent targets, releases managed Leader output
@@ -437,23 +422,29 @@ Native HD board detection also blocks `run`, independently of profile approval.
 An engineering `version: 3` profile may record an operator-confirmed fully closed
 gripper after stable, genuinely new raw motor frames have been observed:
 
-`gripper_closed_observation` contains exactly
-`operator_confirmed_closed: true` and `raw_position_code`. Fill the latter with
-the 16-bit integer observed on the actual fully closed gripper; source releases
-do not supply a measured endpoint or a ready-to-use observation profile.
+```json
+{
+  "commissioning": {
+    "gripper_closed_observation": {
+      "operator_confirmed_closed": true,
+      "raw_position_code": 32768
+    }
+  }
+}
+```
 
-Record this only after confirming the physical gripper is fully closed and
-observing stable, genuinely new raw motor frames. The exact nested keys are
-required: confirmation must be `true`, and the raw code a 16-bit integer decoded
-with axis 7 `p_max`. The resulting positive closed reference must be at most
-16 position LSBs above zero. This is a software commissioning constraint, not a
-manufacturer accuracy claim. The closed upper guard is that observed reference
-plus the existing motor-position margin; the open lower guard remains unchanged.
-The observation changes no global offset, SDK command, coordinate conversion or
-paired calibration. The profile and observation require normal binding
-regeneration. Only engineering inspect/follow/monitor accept this field; reviewed
-force profiles reject it. This records the guard reference, not validation of
-following, damping or the complete physical travel.
+This is a nested schema example, not a complete profile. Code 32768 is synthetic;
+do not use it as a physical closed endpoint. The raw code must be a 16-bit integer,
+decoded with axis 7 `p_max`; its positive reference may be no more than 16 position
+LSBs above zero. This software commissioning constraint is not a manufacturer
+accuracy claim. The closed upper guard uses the genuine observed reference plus
+the original four-LSB margin; the open lower guard is unchanged.
+
+The observation does not shift telemetry, global offsets, SDK commands, the
+TypeLJ nonlinear converter or paired calibration. It is part of the bound profile
+and requires normal rebinding after changes. Only engineering inspect/follow/monitor
+accept it; reviewed force profiles reject it. It validates neither full physical
+travel nor following/damping performance.
 
 ## Version, binding and delivery
 

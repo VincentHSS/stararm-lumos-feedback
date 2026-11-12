@@ -45,14 +45,6 @@ class NativeButtonForceUnavailable(RuntimeError):
     code = "native_button_force_unreviewed"
 
 
-class BaselineRecaptureError(RuntimeError):
-    """A deliberate unloaded capture failed its current-session admission."""
-
-    def __init__(self, code):
-        self.code = code
-        super().__init__(code)
-
-
 def validate_socketcan(interface, bitrate):
     try:
         result = subprocess.run(
@@ -158,14 +150,13 @@ class LeaderReader:
 
     def _command_button_state(self):
         if self.command_button is not None:
-            with self.transport.lock:
-                self.command_button.update()
-                self.manual_hold = (
-                    self.command_button.pending or self.command_button.locked is not False
-                    or getattr(self.transport, "native_output_unknown", False)
-                )
-                if self.button_status is not None:
-                    self.button_status(self.command_button.verified if not self.command_button.pending else None)
+            self.command_button.update()
+            self.manual_hold = (
+                self.command_button.pending or self.command_button.locked is not False
+                or getattr(self.transport, "native_output_unknown", False)
+            )
+            if self.button_status is not None:
+                self.button_status(self.command_button.verified if not self.command_button.pending else None)
 
     def install(self):
         self.leader.native_button_rx_active = False
@@ -235,7 +226,6 @@ class Session:
         self.stop = threading.Event()
         self.watchdog = None
         self.error = None
-        self._startup_rx_error = None
         self.heartbeat = time.monotonic()
         self.target = None
         self.desired = None
@@ -255,111 +245,6 @@ class Session:
         # completed follow command. Initial empty-arm baseline admission uses
         # only a full send_action return recorded by this session.
         self._baseline_completed_send = None
-        self._baseline_admission_diagnostics = None
-        self._baseline_recapture_lock = threading.Lock()
-        self._baseline_recapture_pending = threading.Event()
-        self._baseline_recapture_state = dict(state="idle", reason="not_requested")
-
-    def baseline_recapture_status(self):
-        with self._baseline_recapture_lock:
-            return dict(self._baseline_recapture_state)
-
-    def _baseline_recapture_rejection(self):
-        """Check cached session/native state; never read serial in HTTP threads."""
-        if self.mode != "experiment" or self.stop.is_set() or self.error is not None:
-            return "active_experiment_required"
-        if not self._sdk_history_ready or self.transport is None or self.reader is None:
-            return "sdk_history_required"
-        if getattr(self.transport, "fault", None):
-            return "sdk_history_required"
-        with self.transport.lock:
-            button = getattr(self.transport, "command_button", None)
-            if (
-                button is None or button.verified is not True or button.locked is not False
-                or button.pending or self.reader.manual_hold
-                or getattr(self.transport, "native_output_unknown", False)
-            ):
-                return "native_release_required"
-        return None
-
-    def can_recapture_baseline(self):
-        with self._baseline_recapture_lock:
-            if self._baseline_recapture_state["state"] in ("pending", "collecting"):
-                return False
-            if self._baseline_recapture_rejection() is not None:
-                return False
-            with self.caps.lock:
-                return all(min(self.caps.common, cap) == 0 for cap in self.caps.axes)
-
-    def request_baseline_recapture(self):
-        """Queue one explicit unloaded capture; only step() resets the controller."""
-        with self._baseline_recapture_lock:
-            state = self._baseline_recapture_state["state"]
-            if state in ("pending", "collecting"):
-                raise BaselineRecaptureError("recapture_" + state)
-            reason = self._baseline_recapture_rejection()
-            if reason is not None:
-                raise BaselineRecaptureError(reason)
-            with self.caps.lock:
-                if any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
-                    raise BaselineRecaptureError("zero_caps_required")
-                self._baseline_recapture_state = dict(state="pending", reason="recapture_queued")
-                self._baseline_recapture_pending.set()
-            return dict(self._baseline_recapture_state)
-
-    def _abort_baseline_recapture_locked(self, reason):
-        self._baseline_recapture_pending.clear()
-        self.controller.abort_unloaded_baseline(reason)
-        self.baseline = self.controller.baseline
-        self._baseline_admission_diagnostics = None
-        self._status_cache = {}
-        self._last_status_at = None
-        self._baseline_recapture_state = dict(state="rejected", reason=reason)
-
-    def _process_baseline_recapture(self):
-        """Revalidate the queued contract on the control thread before update."""
-        if self.baseline_recapture_status()["state"] not in ("pending", "collecting"):
-            return
-        # RX is allowed only here. Do not hold the recapture lock across this
-        # call: native status publication may acquire the connection lock.
-        if self.transport is not None and self.reader is not None:
-            self.transport.observe_native_state()
-            self.reader._command_button_state()
-        with self._baseline_recapture_lock:
-            if self._baseline_recapture_state["state"] not in ("pending", "collecting"):
-                return
-            reason = self._baseline_recapture_rejection()
-            with self.caps.lock:
-                if reason is None and any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
-                    reason = "zero_caps_required"
-                if reason is not None:
-                    self._abort_baseline_recapture_locked("recapture_aborted_" + reason)
-                    return
-                if self._baseline_recapture_pending.is_set():
-                    self.controller.reset_unloaded_baseline()
-                    self.baseline = self.controller.baseline
-                    self._baseline_admission_diagnostics = None
-                    self._status_cache = {}
-                    self._last_status_at = None
-                    self._baseline_recapture_pending.clear()
-                    self._baseline_recapture_state = dict(
-                        state="collecting", reason="collecting_declared_unloaded_baseline",
-                    )
-
-    def _finish_baseline_recapture(self):
-        with self._baseline_recapture_lock:
-            if self._baseline_recapture_state["state"] != "collecting":
-                return
-            reason = self._baseline_recapture_rejection()
-            with self.caps.lock:
-                if reason is None and any(min(self.caps.common, cap) != 0 for cap in self.caps.axes):
-                    reason = "zero_caps_required"
-                if reason is not None:
-                    self._abort_baseline_recapture_locked("recapture_aborted_" + reason)
-                elif self.controller._baseline_collection_closed:
-                    self._baseline_recapture_state = dict(
-                        state="complete", reason="baseline_recapture_complete",
-                    )
 
     @property
     def automatic_hold_accepted(self):
@@ -400,45 +285,8 @@ class Session:
 
     def initial_baseline_admission(self, samples):
         """Qualify only the first local unloaded window; never relearn a load."""
-        diagnostics = dict(
-            axis_names=[f"J{i}" for i in range(1, 7)] + ["gripper"],
-            axis_units=["rad"] * 6 + ["normalized_opening"],
-            target=None, sent_target=None, measured_position=None,
-            target_error=None, target_tolerance=None,
-            arrival_error=None, arrival_tolerance=None,
-            target_blocked_axes=None, arrival_blocked_axes=None, blocked_axes=None,
-        )
-        groups = {"arm": list(range(6)), "gripper": [6]}
-
-        def result(allowed, reason):
-            admission = dict(
-                allowed=allowed, reason=reason, common_allowed=diagnostics["target_error"] is not None,
-                **diagnostics,
-                groups={
-                    name: dict(allowed=allowed, reason=reason, axis_indices=indices.copy())
-                    for name, indices in groups.items()
-                },
-            )
-            if diagnostics["target_error"] is not None:
-                for name, indices in groups.items():
-                    target_waiting = any(abs(target_error[i]) > target_tolerance[i] for i in indices)
-                    arrival_waiting = any(abs(arrival_error[i]) > arrival_tolerance[i] for i in indices)
-                    admission["groups"][name].update(
-                        allowed=not target_waiting and not arrival_waiting,
-                        reason="waiting_follow_target" if target_waiting else
-                        "waiting_follower_settled" if arrival_waiting else "baseline_admission_allowed",
-                    )
-            # Retain the last actual admission check across adapter cleanup.
-            # Publishing must not recheck native events or infer gripper
-            # targets from the next command sent later in this cycle.
-            self._baseline_admission_diagnostics = {
-                key: value.copy() if isinstance(value, list) else value
-                for key, value in admission.items()
-            }
-            return admission
-
         def denied(reason):
-            return result(False, reason)
+            return dict(allowed=False, reason=reason)
 
         allowed = self.transport.observe_native_state()
         self.reader._command_button_state()
@@ -483,32 +331,12 @@ class Session:
             grip_jacobian * self.profile.gripper_transform["sdk_motor_tolerance_rad"],
         )
         target_tolerance = arm_target_tolerance + [grip_tolerance]
-        arrival_tolerance = [math.radians(max_step)] * 6 + [grip_tolerance]
-        # These signed errors describe the same pre-send samples and complete
-        # command already used by the gate. Arm coordinates are SDK radians;
-        # the gripper is normalized physical opening, never motor radians.
-        target_error = [q - executed for q, executed in zip(final_target, sent)]
-        arrival_error = [sample.q - executed for sample, executed in zip(samples, sent)]
-        target_blocked = [
-            name for name, error, margin in zip(diagnostics["axis_names"], target_error, target_tolerance)
-            if abs(error) > margin
-        ]
-        arrival_blocked = [
-            name for name, error, margin in zip(diagnostics["axis_names"], arrival_error, arrival_tolerance)
-            if abs(error) > margin
-        ]
-        diagnostics.update(
-            target=final_target, sent_target=list(sent), measured_position=[sample.q for sample in samples],
-            target_error=target_error, target_tolerance=target_tolerance,
-            arrival_error=arrival_error, arrival_tolerance=arrival_tolerance,
-            target_blocked_axes=target_blocked, arrival_blocked_axes=arrival_blocked,
-            blocked_axes=[name for name in diagnostics["axis_names"] if name in target_blocked or name in arrival_blocked],
-        )
         if any(abs(q - executed) > margin for q, executed, margin in zip(final_target, sent, target_tolerance)):
             return denied("waiting_follow_target")
+        arrival_tolerance = [math.radians(max_step)] * 6 + [grip_tolerance]
         if any(abs(sample.q - executed) > margin for sample, executed, margin in zip(samples, sent, arrival_tolerance)):
             return denied("waiting_follower_settled")
-        return result(True, "baseline_admission_allowed")
+        return dict(allowed=True, target=final_target, target_tolerance=target_tolerance)
 
     def limited_gripper_action(self, action, samples):
         now = time.monotonic()
@@ -578,9 +406,6 @@ class Session:
         )
         if self.mode == "experiment":
             telemetry["experimental"] = self.experimental_state()
-            telemetry["baseline_admission"] = self._baseline_admission_diagnostics
-            telemetry["baseline_recapture"] = self.baseline_recapture_status()
-            telemetry["can_recapture_baseline"] = self.can_recapture_baseline()
             native_waiting = telemetry["experimental"]["state"] == "waiting_native_unlock"
             unknown = bool(getattr(self.transport, "native_output_unknown", False))
             telemetry["leader_controlled"] = not native_waiting and not unknown
@@ -617,60 +442,12 @@ class Session:
         return samples
 
     def check_cancelled(self):
-        if self._startup_rx_error is not None:
-            raise self._startup_rx_error
         # A concurrent watchdog fault must remain an error even when the user
         # also requests stop. Cancellation only suppresses an explicit stop.
         if self.error is not None:
             raise RuntimeError(f"Feedback stopped: {self.error}") from self.error
         if self.stop.is_set():
             raise SessionCancelled
-
-    @contextmanager
-    def native_startup_reception(self):
-        """Keep the single UART receiver alive while SDK startup blocks.
-
-        No monitor query or control is sent here. The existing transport lock
-        serializes this receiver with preflight queries, and the thread is
-        joined before the active loop takes over. The native group deadline
-        and six-joint confirmation rules remain unchanged.
-        """
-        transport = self.transport
-        if transport is None or transport.command_button is None:
-            yield
-            return
-        transport.settle_native_commands(cancel_check=self.check_cancelled)
-        finished = threading.Event()
-
-        def receive():
-            try:
-                while not finished.is_set() and not self.stop.is_set():
-                    transport.receive_native_commands()
-                    finished.wait(0.002)
-            except Exception as exc:
-                self._startup_rx_error = exc
-                self.stop.set()
-
-        receiver = threading.Thread(target=receive, name="lumos-startup-uart-rx", daemon=True)
-        receiver.start()
-        failed = False
-        try:
-            self.check_cancelled()
-            yield
-        except BaseException:
-            failed = True
-            if self._startup_rx_error is not None:
-                raise self._startup_rx_error
-            raise
-        finally:
-            finished.set()
-            # UART reads are nonblocking and transport polling is bounded.
-            # Complete the handoff before any active query or UART cleanup;
-            # a timed join must never leave a second reader behind.
-            receiver.join()
-            if not failed:
-                self.check_cancelled()
-                transport.settle_native_commands(cancel_check=self.check_cancelled)
 
     def check_sdk(self, samples):
         self.check_cancelled()
@@ -893,12 +670,10 @@ class Session:
         if self.target is None:
             self.target = [s.q for s in samples]
         if self.mode == "experiment":
-            self._process_baseline_recapture()
             self.controller.update(
                 samples, self.target, self.desired,
                 baseline_admission=self.initial_baseline_admission(samples),
             )
-            self._finish_baseline_recapture()
         elif self.mode != "follow":
             if self.controller.update(samples, self.target, self.desired):
                 self.baseline.update(samples, self.controller.telemetry["residual_nm"])
@@ -1024,25 +799,22 @@ class Session:
                     raise RuntimeError("Current-pose startup requires engineering follow or monitor mode")
                 self.robot.after_sdk_startup = self.current_startup_feedback
                 self._startup_callback_installed = True
-            with self.native_startup_reception():
-                if self.before_enable is not None:
-                    self.before_enable(self.transport)
-                    self.check_cancelled()
-                if getattr(self.robot, "startup_strategy", "home") == "current_relative":
-                    try:
-                        reference = self.robot.startup_reference
-                        offset = tuple(reference["session_offset_sdk_rad"])
-                        if (
-                            reference["startup_strategy"] != "current_relative" or len(offset) != 6
-                            or not all(type(v) in (int, float) and math.isfinite(v) for v in offset)
-                        ):
-                            raise ValueError("invalid session offset")
-                    except (AttributeError, KeyError, TypeError, ValueError) as exc:
-                        raise RuntimeError("Current-relative startup requires its fixed preflight offset") from exc
-                    self._session_offset_sdk_rad = offset
-                if command_button is not None:
-                    self.transport.settle_native_commands(cancel_check=self.check_cancelled)
-                self.robot.connect()  # SDK construction can enable motors; monitor already listening
+            if self.before_enable is not None:
+                self.before_enable(self.transport)
+                self.check_cancelled()
+            if getattr(self.robot, "startup_strategy", "home") == "current_relative":
+                try:
+                    reference = self.robot.startup_reference
+                    offset = tuple(reference["session_offset_sdk_rad"])
+                    if (
+                        reference["startup_strategy"] != "current_relative" or len(offset) != 6
+                        or not all(type(v) in (int, float) and math.isfinite(v) for v in offset)
+                    ):
+                        raise ValueError("invalid session offset")
+                except (AttributeError, KeyError, TypeError, ValueError) as exc:
+                    raise RuntimeError("Current-relative startup requires its fixed preflight offset") from exc
+                self._session_offset_sdk_rad = offset
+            self.robot.connect()  # SDK construction can enable motors; monitor already listening
             self.check_cancelled()
             deadline = time.monotonic() + guards["startup_feedback_s"]
             while True:
@@ -1139,10 +911,6 @@ class Session:
         finally:
             self._sdk_history_ready = False
             self.stop.set()
-            if self.mode == "experiment":
-                with self._baseline_recapture_lock:
-                    if self._baseline_recapture_state["state"] in ("pending", "collecting"):
-                        self._abort_baseline_recapture_locked("recapture_aborted_session_stopped")
             if self.watchdog is not None:
                 self.watchdog.join(timeout=0.2)
             failures = self.transport.release() if self.transport else []

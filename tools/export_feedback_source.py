@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {".gitignore", "pyproject.toml", "README.md", "README_STANDALONE.md", "VALIDATION.md"}
 SOURCE_DIRS = {"src", "tests", "docs", "scripts", "tools"}
-SUFFIXES = {".py", ".cpp", ".md", ".txt", ".sh", ".html", ".css", ".js", ".urdf", ".stl", ".json", ".svg"}
+SUFFIXES = {".py", ".cpp", ".md", ".txt", ".sh", ".html", ".css", ".js", ".urdf", ".stl", ".json"}
 
 
 def source_files():

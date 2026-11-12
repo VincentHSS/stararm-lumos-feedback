@@ -104,7 +104,7 @@ const measured=sandbox.schematicPose(model,pose.q_urdf,pose.q_sdk[6]);
 assert.notDeepEqual(JSON.parse(JSON.stringify(measured.points)),model.preview_pose.points);
 const source={dataset:{}};
 Object.assign(sandbox,{
-  modelDefinition:model,state:{last_pose:pose},stateReceivedAt:0,lang:'test',
+  modelDefinition:model,state:{last_pose:pose},lang:'test',
   copy:{test:{livePose:'LIVE',lastPose:'LAST',referencePose:'REFERENCE',calibratedReferencePose:'CALIBRATED',schematic:'SCHEMATIC',schematicNote:'note'}},
   $:()=>source,renderAlignment(){},document:{querySelectorAll:()=>[]},
   telemetryFresh:()=>true,showAlignmentTarget:false,viewerFailed:false,
@@ -200,10 +200,6 @@ main(sys.argv[1:])
         code, _, mime = get("/assets/viewer.js")
         self.assertEqual(code, 200)
         self.assertIn("text/javascript", mime)
-        code, body, mime = get("/assets/icons/play.svg")
-        self.assertEqual(code, 200)
-        self.assertIn("image/svg+xml", mime)
-        self.assertTrue(body.startswith(b"<svg"))
         for path in (
             "/assets/../../config.py",
             "/assets/../config.py",
